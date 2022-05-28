@@ -27,6 +27,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 #include "structures.h"
+#include <cuda_runtime.h>
+#include <cufftXt.h>
 int main( int argc , char *argv[] ) {
 
   /* index counters */
@@ -83,25 +85,26 @@ int main( int argc , char *argv[] ) {
 
   float		grid_span , one_span ;
 
-  fftw_real	*static_grid ;
-  fftw_real	*mobile_grid ;
-  fftw_real	*convoluted_grid ;
+  cufftReal	*static_grid ;
+  cufftReal	*mobile_grid ;
+  cufftReal	*convoluted_grid ;
 
-  fftw_real	*static_elec_grid = ( void * ) 0 ;
-  fftw_real	*mobile_elec_grid = ( void * ) 0 ;
-  fftw_real	*convoluted_elec_grid = ( void * ) 0 ;
+  cufftReal	*static_elec_grid = ( void * ) 0 ;
+  cufftReal	*mobile_elec_grid = ( void * ) 0 ;
+  cufftReal	*convoluted_elec_grid = ( void * ) 0 ;
 
   /* FFTW stuff */
 
-  rfftwnd_plan	p , pinv ;
+  cufftHandle	p , pinv ;
 
-  fftw_complex  *static_fsg ;
-  fftw_complex  *mobile_fsg ;
-  fftw_complex  *multiple_fsg ;
+  cufftComplex  *static_fsg ;
+  cufftComplex  *mobile_fsg ;
+  cufftComplex  *multiple_fsg ;
 
-  fftw_complex  *static_elec_fsg = ( void * ) 0 ;
-  fftw_complex  *mobile_elec_fsg = ( void * ) 0 ;
-  fftw_complex  *multiple_elec_fsg = ( void * ) 0 ;
+  cufftComplex  *static_elec_fsg = ( void * ) 0 ;
+  cufftComplex  *mobile_elec_fsg = ( void * ) 0 ;
+  cufftComplex  *multiple_elec_fsg = ( void * ) 0 ;
+  cufftResult result;
 
   /* Scores */
 
@@ -420,34 +423,34 @@ int main( int argc , char *argv[] ) {
   }
 
   if(
-    ( ( static_grid = ( fftw_real * ) malloc
-     ( global_grid_size * global_grid_size * ( 2 * ( global_grid_size / 2 + 1 ) ) * sizeof( fftw_real ) ) ) == NULL )
+    ( ( static_grid = ( cufftReal * ) malloc
+     ( global_grid_size * global_grid_size * ( 2 * ( global_grid_size / 2 + 1 ) ) * sizeof( cufftReal ) ) ) == NULL )
     ||
-    ( ( mobile_grid = ( fftw_real * ) malloc
-     ( global_grid_size * global_grid_size * ( 2 * ( global_grid_size / 2 + 1 ) ) * sizeof( fftw_real ) ) ) == NULL )
+    ( ( mobile_grid = ( cufftReal * ) malloc
+     ( global_grid_size * global_grid_size * ( 2 * ( global_grid_size / 2 + 1 ) ) * sizeof( cufftReal ) ) ) == NULL )
     ||
-    ( ( convoluted_grid = ( fftw_real * ) malloc
-     ( global_grid_size * global_grid_size * ( 2 * ( global_grid_size / 2 + 1 ) ) * sizeof( fftw_real ) ) ) == NULL )
+    ( ( convoluted_grid = ( cufftReal * ) malloc
+     ( global_grid_size * global_grid_size * ( 2 * ( global_grid_size / 2 + 1 ) ) * sizeof( cufftReal ) ) ) == NULL )
     ) {
     printf( "Not enough memory for surface grids\nUse (sensible) smaller grid size\nDying\n\n" ) ;
     exit( EXIT_FAILURE ) ;
   }
 
-  static_fsg = ( fftw_complex * ) static_grid ;
-  mobile_fsg = ( fftw_complex * ) mobile_grid ;
-  multiple_fsg = ( fftw_complex * ) convoluted_grid ;
+  static_fsg = ( cufftComplex * ) static_grid ;
+  mobile_fsg = ( cufftComplex * ) mobile_grid ;
+  multiple_fsg = ( cufftComplex * ) convoluted_grid ;
 
   if( electrostatics == 1 ) {
 
     if(
-      ( ( static_elec_grid = ( fftw_real * ) malloc
-       ( global_grid_size * global_grid_size * ( 2 * ( global_grid_size / 2 + 1 ) ) * sizeof( fftw_real ) ) ) == NULL )
+      ( ( static_elec_grid = ( cufftReal * ) malloc
+       ( global_grid_size * global_grid_size * ( 2 * ( global_grid_size / 2 + 1 ) ) * sizeof( cufftReal ) ) ) == NULL )
       ||
-      ( ( mobile_elec_grid = ( fftw_real * ) malloc
-       ( global_grid_size * global_grid_size * ( 2 * ( global_grid_size / 2 + 1 ) ) * sizeof( fftw_real ) ) ) == NULL )
+      ( ( mobile_elec_grid = ( cufftReal * ) malloc
+       ( global_grid_size * global_grid_size * ( 2 * ( global_grid_size / 2 + 1 ) ) * sizeof( cufftReal ) ) ) == NULL )
       ||
-      ( ( convoluted_elec_grid = ( fftw_real * ) malloc
-       ( global_grid_size * global_grid_size * ( 2 * ( global_grid_size / 2 + 1 ) ) * sizeof( fftw_real ) ) ) == NULL )
+      ( ( convoluted_elec_grid = ( cufftReal * ) malloc
+       ( global_grid_size * global_grid_size * ( 2 * ( global_grid_size / 2 + 1 ) ) * sizeof( cufftReal ) ) ) == NULL )
       ) {
       printf( "Not enough memory for electrostatic grids\nSwitch off electrostatics or use (sensible) smaller grid size\nDying\n\n" ) ;
       exit( EXIT_FAILURE ) ;
@@ -456,9 +459,9 @@ int main( int argc , char *argv[] ) {
       printf( "Electrostatics are on\n" ) ;
     }
 
-    static_elec_fsg = ( fftw_complex * ) static_elec_grid ;
-    mobile_elec_fsg = ( fftw_complex * ) mobile_elec_grid ;
-    multiple_elec_fsg = ( fftw_complex * ) convoluted_elec_grid ;
+    static_elec_fsg = ( cufftComplex * ) static_elec_grid ;
+    mobile_elec_fsg = ( cufftComplex * ) mobile_elec_grid ;
+    multiple_elec_fsg = ( cufftComplex * ) convoluted_elec_grid ;
 
   }
 
@@ -467,10 +470,10 @@ int main( int argc , char *argv[] ) {
   /* Create FFTW plans */
 
   printf( "Creating plans\n" ) ;
-  p    = rfftw3d_create_plan( global_grid_size , global_grid_size , global_grid_size ,
-                               FFTW_REAL_TO_COMPLEX , FFTW_MEASURE | FFTW_IN_PLACE ) ;
-  pinv = rfftw3d_create_plan( global_grid_size , global_grid_size , global_grid_size ,
-                               FFTW_COMPLEX_TO_REAL , FFTW_MEASURE | FFTW_IN_PLACE ) ;
+  result = cufftPlan3D(&p, global_grid_size , global_grid_size , global_grid_size ,
+                               CUFFT_R2C) ;
+  result = cufftPlan3D(&pinv, global_grid_size , global_grid_size , global_grid_size ,
+                               CUFFT_C2R) ;
 
 /************/
 
@@ -557,9 +560,9 @@ int main( int argc , char *argv[] ) {
     }
 
     /* Forward Fourier Transforms */
-    rfftwnd_one_real_to_complex( p , mobile_grid , NULL ) ;
+    result = cufftExecR2C( p , mobile_grid , NULL ) ;
     if( electrostatics == 1 ) {
-      rfftwnd_one_real_to_complex( p , mobile_elec_grid , NULL ) ;
+          result = cufftExecR2C( p , mobile_elec_grid , NULL ) ;
     }
 
 /************/
@@ -593,9 +596,9 @@ int main( int argc , char *argv[] ) {
     }
 
     /* Reverse Fourier Transform */
-    rfftwnd_one_complex_to_real( pinv , multiple_fsg , NULL ) ;
+    result = cufftExecC2R( pinv , multiple_fsg , NULL ) ;
     if( electrostatics == 1 ) {
-      rfftwnd_one_complex_to_real( pinv , multiple_elec_fsg , NULL ) ;
+      result = cufftExecC2R( pinv , multiple_elec_fsg , NULL ) ;
     }
 
 /************/
