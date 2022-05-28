@@ -704,17 +704,17 @@ int main( int argc , char *argv[] ) {
 
   /* Free the memory */
 
-  rfftwnd_destroy_plan( p ) ;
-  rfftwnd_destroy_plan( pinv ) ;
+  result = cufftDestroy(p) ;
+  result = cufftDestroy( pinv ) ;
 
-  free( static_grid ) ;
-  free( mobile_grid ) ;
-  free( convoluted_grid ) ;
+  result = cudaFree( static_grid ) ;
+  result =cudaFree( mobile_grid ) ;
+  result =cudaFree( convoluted_grid ) ;
 
   if( electrostatics == 1 ) {
-    free( static_elec_grid ) ;
-    free( mobile_elec_grid ) ;
-    free( convoluted_elec_grid ) ;
+    result =cudaFree( static_elec_grid ) ;
+    result=cudaFree( mobile_elec_grid ) ;
+    result=cudaFree( convoluted_elec_grid ) ;
   }
 
   for( i = 1 ; i <= Origin_Static_Structure.length ; i ++ ) {
