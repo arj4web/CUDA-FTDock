@@ -29,6 +29,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "structures.h"
 #include <cuda_runtime.h>
 #include <cufftXt.h>
+#include <cufft.h>
 int main( int argc , char *argv[] ) {
 
   /* index counters */
@@ -89,9 +90,9 @@ int main( int argc , char *argv[] ) {
   cufftReal	*mobile_grid ;
   cufftReal	*convoluted_grid ;
 
-  cufftReal	*static_elec_grid = ( void * ) 0 ;
-  cufftReal	*mobile_elec_grid = ( void * ) 0 ;
-  cufftReal	*convoluted_elec_grid = ( void * ) 0 ;
+  cufftReal	*static_elec_grid;
+  cufftReal	*mobile_elec_grid;
+  cufftReal	*convoluted_elec_grid;
 
   /* FFTW stuff */
 
@@ -101,9 +102,9 @@ int main( int argc , char *argv[] ) {
   cufftComplex  *mobile_fsg ;
   cufftComplex  *multiple_fsg ;
 
-  cufftComplex  *static_elec_fsg = ( void * ) 0 ;
-  cufftComplex  *mobile_elec_fsg = ( void * ) 0 ;
-  cufftComplex  *multiple_elec_fsg = ( void * ) 0 ;
+  cufftComplex  *static_elec_fsg;
+  cufftComplex  *mobile_elec_fsg;
+  cufftComplex  *multiple_elec_fsg;
   cufftResult result;
 
   /* Scores */
@@ -470,9 +471,9 @@ int main( int argc , char *argv[] ) {
   /* Create FFTW plans */
 
   printf( "Creating plans\n" ) ;
-  result = cufftPlan3D(&p, global_grid_size , global_grid_size , global_grid_size ,
+  result = cufftPlan3d(&p, global_grid_size , global_grid_size , global_grid_size ,
                                CUFFT_R2C) ;
-  result = cufftPlan3D(&pinv, global_grid_size , global_grid_size , global_grid_size ,
+  result = cufftPlan3d(&pinv, global_grid_size , global_grid_size , global_grid_size ,
                                CUFFT_C2R) ;
 
 /************/
@@ -492,9 +493,9 @@ int main( int argc , char *argv[] ) {
 
   /* Fourier Transform the static grids (need do only once) */
   printf( "  one time forward FFT calculations\n" ) ;
-  rfftwnd_one_real_to_complex( p , static_grid , NULL ) ;
+  result = cufftExecR2C( p , static_grid , NULL ) ;
   if( electrostatics == 1 ) {
-    rfftwnd_one_real_to_complex( p , static_elec_grid , NULL ) ;
+    result =cufftExecR2C( p , static_elec_grid , NULL ) ;
   }
 
   printf( "  done\n" ) ;
@@ -579,7 +580,7 @@ int main( int argc , char *argv[] ) {
 
           fxyz = fz + ( global_grid_size/2 + 1 ) * ( fy + global_grid_size * fx ) ;
 
-          multiple_fsg[fxyz].re =
+          multiple_fsg[fxyz].real =
            static_fsg[fxyz].re * mobile_fsg[fxyz].re + static_fsg[fxyz].im * mobile_fsg[fxyz].im ;
           multiple_fsg[fxyz].im =
            static_fsg[fxyz].im * mobile_fsg[fxyz].re - static_fsg[fxyz].re * mobile_fsg[fxyz].im ;
