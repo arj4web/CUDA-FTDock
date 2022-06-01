@@ -106,6 +106,7 @@ int main( int argc , char *argv[] ) {
   cufftComplex  *mobile_elec_fsg;
   cufftComplex  *multiple_elec_fsg;
   cufftResult result;
+  cudaError_t error;
 
   /* Scores */
 
@@ -580,16 +581,16 @@ int main( int argc , char *argv[] ) {
 
           fxyz = fz + ( global_grid_size/2 + 1 ) * ( fy + global_grid_size * fx ) ;
 
-          multiple_fsg[fxyz].real =
-           static_fsg[fxyz].re * mobile_fsg[fxyz].re + static_fsg[fxyz].im * mobile_fsg[fxyz].im ;
-          multiple_fsg[fxyz].im =
-           static_fsg[fxyz].im * mobile_fsg[fxyz].re - static_fsg[fxyz].re * mobile_fsg[fxyz].im ;
+          multiple_fsg[fxyz].x =
+           static_fsg[fxyz].x * mobile_fsg[fxyz].x + static_fsg[fxyz].y * mobile_fsg[fxyz].y;
+          multiple_fsg[fxyz].y =
+           static_fsg[fxyz].y * mobile_fsg[fxyz].x - static_fsg[fxyz].x * mobile_fsg[fxyz].y;
            
           if( electrostatics == 1 ) {
-            multiple_elec_fsg[fxyz].re =
-             static_elec_fsg[fxyz].re * mobile_elec_fsg[fxyz].re + static_elec_fsg[fxyz].im * mobile_elec_fsg[fxyz].im ;
-            multiple_elec_fsg[fxyz].im =
-             static_elec_fsg[fxyz].im * mobile_elec_fsg[fxyz].re - static_elec_fsg[fxyz].re * mobile_elec_fsg[fxyz].im ;
+            multiple_elec_fsg[fxyz].x =
+             static_elec_fsg[fxyz].x * mobile_elec_fsg[fxyz].x + static_elec_fsg[fxyz].y * mobile_elec_fsg[fxyz].y ;
+            multiple_elec_fsg[fxyz].y =
+             static_elec_fsg[fxyz].y * mobile_elec_fsg[fxyz].x - static_elec_fsg[fxyz].x * mobile_elec_fsg[fxyz].y ;
           }
 
         }
@@ -708,14 +709,14 @@ int main( int argc , char *argv[] ) {
   result = cufftDestroy(p) ;
   result = cufftDestroy( pinv ) ;
 
-  result = cudaFree( static_grid ) ;
-  result =cudaFree( mobile_grid ) ;
-  result =cudaFree( convoluted_grid ) ;
+  error = cudaFree( static_grid ) ;
+  error =cudaFree( mobile_grid ) ;
+  error =cudaFree( convoluted_grid ) ;
 
   if( electrostatics == 1 ) {
-    result =cudaFree( static_elec_grid ) ;
-    result=cudaFree( mobile_elec_grid ) ;
-    result=cudaFree( convoluted_elec_grid ) ;
+    error =cudaFree( static_elec_grid ) ;
+    error =cudaFree( mobile_elec_grid ) ;
+    error =cudaFree( convoluted_elec_grid ) ;
   }
 
   for( i = 1 ; i <= Origin_Static_Structure.length ; i ++ ) {
