@@ -90,7 +90,7 @@ void electric_field( struct Structure This_Structure , float grid_span , int gri
   /* Co-ordinates */
 
   int	x , y , z ;
-  float		x_centre , y_centre , z_centre ;
+  float		x_centre , y_centre , z_centre ;//scope for cuda
 
   /* Variables */
 
@@ -115,7 +115,7 @@ void electric_field( struct Structure This_Structure , float grid_span , int gri
 
   printf( "  electric field calculations ( one dot / grid sheet ) " ) ;
 
-  for( x = 0 ; x < grid_size ; x ++ ) {
+  for( x = 0 ; x < grid_size ; x ++ ) {//scope for cuda
 
     printf( "." ) ;
 
