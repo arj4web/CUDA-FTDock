@@ -26,4 +26,4 @@ include an electrostatic filter, and this is again implemented in the current ve
 * There I changed the fftw library code to cufft library code and finally removed the fftw library path from header file [structures.h](./3D_Dock/progs/structures.h) making the [ftdock.cu](./3D_Dock/progs/ftdock.cu) code error free without any syntax error and compilation error due to the fourier transformation part in main loop.
 
 
-[For scope of CUDA in this programme](https://slides.com/adityaranjanjha/code)
+[For scope of CUDA in this programme](https://slides.com/adityaranjanjha/code/fullscreem)
