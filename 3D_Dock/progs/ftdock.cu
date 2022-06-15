@@ -425,14 +425,11 @@ int main( int argc , char *argv[] ) {
   }
 
   if(
-    ( ( static_grid = ( cufftReal * ) malloc
-     ( global_grid_size * global_grid_size * ( 2 * ( global_grid_size / 2 + 1 ) ) * sizeof( cufftReal ) ) ) == NULL )
+    ( ( static_grid = ( cufftReal * )cudaMalloc( global_grid_size * global_grid_size * ( 2 * ( global_grid_size / 2 + 1 ) ) * sizeof( cufftReal ) ) ) == NULL )
     ||
-    ( ( mobile_grid = ( cufftReal * ) malloc
-     ( global_grid_size * global_grid_size * ( 2 * ( global_grid_size / 2 + 1 ) ) * sizeof( cufftReal ) ) ) == NULL )
+    ( ( mobile_grid = ( cufftReal * ) cudaMalloc ( global_grid_size * global_grid_size * ( 2 * ( global_grid_size / 2 + 1 ) ) * sizeof( cufftReal ) ) ) == NULL )
     ||
-    ( ( convoluted_grid = ( cufftReal * ) malloc
-     ( global_grid_size * global_grid_size * ( 2 * ( global_grid_size / 2 + 1 ) ) * sizeof( cufftReal ) ) ) == NULL )
+    ( ( convoluted_grid = ( cufftReal * )cudaMalloc( global_grid_size * global_grid_size * ( 2 * ( global_grid_size / 2 + 1 ) ) * sizeof( cufftReal ) ) ) == NULL )
     ) {
     printf( "Not enough memory for surface grids\nUse (sensible) smaller grid size\nDying\n\n" ) ;
     exit( EXIT_FAILURE ) ;
@@ -445,14 +442,11 @@ int main( int argc , char *argv[] ) {
   if( electrostatics == 1 ) {
 
     if(
-      ( ( static_elec_grid = ( cufftReal * ) malloc
-       ( global_grid_size * global_grid_size * ( 2 * ( global_grid_size / 2 + 1 ) ) * sizeof( cufftReal ) ) ) == NULL )
+      ( ( static_elec_grid = ( cufftReal * )cudaMalloc( global_grid_size * global_grid_size * ( 2 * ( global_grid_size / 2 + 1 ) ) * sizeof( cufftReal ) ) ) == NULL )
       ||
-      ( ( mobile_elec_grid = ( cufftReal * ) malloc
-       ( global_grid_size * global_grid_size * ( 2 * ( global_grid_size / 2 + 1 ) ) * sizeof( cufftReal ) ) ) == NULL )
+      ( ( mobile_elec_grid = ( cufftReal * )cudaMalloc( global_grid_size * global_grid_size * ( 2 * ( global_grid_size / 2 + 1 ) ) * sizeof( cufftReal ) ) ) == NULL )
       ||
-      ( ( convoluted_elec_grid = ( cufftReal * ) malloc
-       ( global_grid_size * global_grid_size * ( 2 * ( global_grid_size / 2 + 1 ) ) * sizeof( cufftReal ) ) ) == NULL )
+      ( ( convoluted_elec_grid = ( cufftReal * )cudaMalloc( global_grid_size * global_grid_size * ( 2 * ( global_grid_size / 2 + 1 ) ) * sizeof( cufftReal ) ) ) == NULL )
       ) {
       printf( "Not enough memory for electrostatic grids\nSwitch off electrostatics or use (sensible) smaller grid size\nDying\n\n" ) ;
       exit( EXIT_FAILURE ) ;
