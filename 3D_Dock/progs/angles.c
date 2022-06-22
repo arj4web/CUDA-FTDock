@@ -27,8 +27,85 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 #include "structures.h"
+#include <stdio.h>
+#include <time.h>
+#include <stdlib.h>
+#define MAX_ROTATIONS  80
+#define GENERAL_MEMORY_PROBLEM printf( "You do not have enough memory ([m|re]alloc failure)\nDying\n\n" ) ; exit( EXIT_FAILURE ) ;
+typedef struct __align__{
+	int	*z_twist ;
+	int	*theta ;
+	int	*phi ;
+} Angle;
+__global__ void testfunc(Angle Angles)
+{
+    int i=threadIdx.x;
+    Angles.z_twist[i] = i ;
+    Angles.theta[i]   = 0 ;
+    Angles.phi[i]     = 1 ;
+    printf("%d\n",Angles.z_twist[i]);
 
-struct Angle generate_global_angles( int angle_step ) {
+
+
+}
+int main()
+{
+    Angle Angles,AnglesonGPU;
+  Angles.z_twist = ( int * ) malloc ( MAX_ROTATIONS * sizeof( int ));
+  Angles.theta   = ( int * ) malloc ( MAX_ROTATIONS * sizeof( int ));
+  Angles.phi     = ( int * ) malloc ( MAX_ROTATIONS * sizeof( int )); 
+  printf("%zu\n\n",sizeof(Angles));
+
+  cudaMalloc((void**)&AnglesonGPU.z_twist,MAX_ROTATIONS * sizeof( int ));
+  cudaMalloc((void**)&AnglesonGPU.theta,MAX_ROTATIONS * sizeof( int ));
+  cudaMalloc((void**)&AnglesonGPU.phi,MAX_ROTATIONS * sizeof( int ));
+  testfunc<<<1,MAX_ROTATIONS>>>(AnglesonGPU);
+  cudaDeviceSynchronize();
+  int x=MAX_ROTATIONS*sizeof(int);
+  cudaMemcpy(Angles.z_twist, AnglesonGPU.z_twist,x,cudaMemcpyDeviceToHost);
+  cudaDeviceSynchronize();
+  for (int i = 0; i < MAX_ROTATIONS; i++)
+  {
+    printf("%d\n",Angles.z_twist[i]);
+  }
+  
+
+
+
+
+
+}
+__global__ void z_rotation(Angle Angles,int n,int angle_step)
+{
+    int i=threadIdx.x;
+    if(i%angle_step==0)
+    {
+      int z=n+(i/angle_step);
+      Angles.z_twist[z] = i ;
+      Angles.theta[z]   = 0 ;
+      Angles.phi[z]     = 0 ;
+    }
+
+
+
+}
+__global__ void theta_rotation(Angle Angles,int n,int angle_step)
+{
+    int i=threadIdx.x;
+    if(i%angle_step==0)
+    {
+      int z=n+(i/angle_step);
+      Angles.z_twist[z] = i ;
+      Angles.theta[z]   = 0 ;
+      Angles.phi[z]     = 0 ;
+    }
+
+
+
+}
+
+
+Angle generate_global_angles( int angle_step ) {
 
 /************/
 
@@ -42,7 +119,7 @@ struct Angle generate_global_angles( int angle_step ) {
   int		phi_step_for_this_theta ;
 
   /* What the data is going into */
-  struct Angle		Angles ;
+  Angle Angles,AnglesonGPU;
 
 /************/
 
@@ -52,6 +129,10 @@ struct Angle generate_global_angles( int angle_step ) {
   } else {
     GENERAL_MEMORY_PROBLEM
   }
+  
+  cudaMalloc((void**)&AnglesonGPU.z_twist,MAX_ROTATIONS * sizeof( int ));
+  cudaMalloc((void**)&AnglesonGPU.theta,MAX_ROTATIONS * sizeof( int ));
+  cudaMalloc((void**)&AnglesonGPU.phi,MAX_ROTATIONS * sizeof( int ));
 
   n = 0 ;
 
@@ -75,16 +156,19 @@ struct Angle generate_global_angles( int angle_step ) {
   }
 
 /************/
+//Parallelized
+z_rotation<<<1,360>>(AnglesonGPU,n,angle_step);
+n+=(359/angle_step);
 
-  for( z_twist = 0 ; z_twist < 360 ; z_twist += angle_step ) {
+  // for( z_twist = 0 ; z_twist < 360 ; z_twist += angle_step ) {
 
-    n ++ ;
+  //   n ++ ;
 
-    Angles.z_twist[n] = z_twist ;
-    Angles.theta[n]   = 0 ;
-    Angles.phi[n]     = 0 ;
+  //   Angles.z_twist[n] = z_twist ;
+  //   Angles.theta[n]   = 0 ;
+  //   Angles.phi[n]     = 0 ;
 
-  }
+  // }
 
   for( theta = angle_step ; theta < 180 ; theta += angle_step ) {
 
