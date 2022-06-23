@@ -80,7 +80,7 @@ __global__ void z_rotation(Angle Angles,int n,int angle_step)
     int i=threadIdx.x;
     if(i%angle_step==0)
     {
-      int z=n+(i/angle_step);
+      int z=n+(i/angle_step)+1;
       Angles.z_twist[z] = i ;
       Angles.theta[z]   = 0 ;
       Angles.phi[z]     = 0 ;
@@ -89,15 +89,42 @@ __global__ void z_rotation(Angle Angles,int n,int angle_step)
 
 
 }
-__global__ void theta_rotation(Angle Angles,int n,int angle_step)
+__global__ void all_rotation(Angle Angles,int n,int angle_step)
 {
-    int i=threadIdx.x;
-    if(i%angle_step==0)
+    
+    int z_twist=threadIdx.x;
+    int theta=_threadIdx.y;
+    int phi = threadIdx.z;
+
+    if(theta%angle_step==0&&theta>0)
     {
-      int z=n+(i/angle_step);
-      Angles.z_twist[z] = i ;
-      Angles.theta[z]   = 0 ;
-      Angles.phi[z]     = 0 ;
+      
+      int phi_step_for_this_theta = 57.29578 * acos( ( cos( 0.017453293 * angle_step ) - ( cos( 0.017453293 * theta ) * cos( 0.017453293 * theta ) ) ) / ( sin( 0.017453293 * theta ) * sin( 0.017453293 * theta ) ) ) ;
+      while( ( 360 % phi_step_for_this_theta ) != 0 ) phi_step_for_this_theta -- ;
+      if (phi%phi_step_for_this_theta==0)
+      {
+        if(z_twist%angle_step==0)
+        {
+          Angles.z_twist[n] = z_twist ;
+          Angles.theta[n]   = theta ;
+          Angles.phi[n]     = phi ;
+
+        }
+      }
+      for (int i = 0; i < 360; i+=phi_step_for_this_theta)
+      {
+        if(z_twist%angle_step==0)
+        {
+          Angles.z_twist[n] = z_twist ;
+          Angles.theta[n]   = theta ;
+          Angles.phi[n]     = phi ;
+
+        }
+        
+      }
+      
+      
+     
     }
 
 
@@ -158,7 +185,7 @@ Angle generate_global_angles( int angle_step ) {
 /************/
 //Parallelized
 z_rotation<<<1,360>>(AnglesonGPU,n,angle_step);
-n+=(359/angle_step);
+n+=(359/angle_step)+1;
 
   // for( z_twist = 0 ; z_twist < 360 ; z_twist += angle_step ) {
 
