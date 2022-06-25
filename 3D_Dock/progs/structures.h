@@ -91,13 +91,12 @@ struct Structure{
 
 /* Angles structure */
 
-struct Angle{
-	int	n ;
+typedef struct Angle{
 	int	*z_twist ;
 	int	*theta ;
 	int	*phi ;
-} ;
-
+	int n;
+} Angle;
 /************/
 
 /* Score structure */
