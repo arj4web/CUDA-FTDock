@@ -158,6 +158,10 @@ n+=(359/angle_step)+1;
   }
 
   Angles.n = n ;
+  cudaFree(AnglesonGPU.z_twist);
+  cudaFree(AnglesonGPU.theta);
+  cudaFree(AnglesonGPU.phi);
+  
 
 /************/
 
