@@ -91,7 +91,7 @@ struct Structure{
 
 /* Angles structure */
 
-typedef struct __align__{
+typedef struct Angle{
 	int	*z_twist ;
 	int	*theta ;
 	int	*phi ;

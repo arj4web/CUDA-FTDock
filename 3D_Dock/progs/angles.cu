@@ -73,7 +73,7 @@ Angle generate_global_angles( int angle_step ) {
 
   /* Variables */
 
-  int		z_twist , theta , phi ;
+  int		z_twist=0 , theta , phi ;
   int		phi_step_for_this_theta ;
 
   /* What the data is going into */
@@ -115,7 +115,7 @@ Angle generate_global_angles( int angle_step ) {
 
 /************/
 //Parallelized
-z_rotation<<<1,360>>(AnglesonGPU,n,angle_step,0);
+z_rotation<<<1,360>>>(AnglesonGPU,n,angle_step,0);
 cudaDeviceSynchronize();
 n+=(359/angle_step)+1;
  
@@ -126,13 +126,13 @@ n+=(359/angle_step)+1;
     phi_step_for_this_theta = 57.29578 * acos( ( cos( 0.017453293 * angle_step ) - ( cos( 0.017453293 * theta ) * cos( 0.017453293 * theta ) ) ) / ( sin( 0.017453293 * theta ) * sin( 0.017453293 * theta ) ) ) ;
 
     while( ( 360 % phi_step_for_this_theta ) != 0 ) phi_step_for_this_theta -- ;
-    dim3 threadsperblock(360,360)
+    dim3 threadsperblock(360,360);
     all_rotation<<<1,threadsperblock>>>(Angles, n, angle_step, phi_step_for_this_theta, theta);
     cudaDeviceSynchronize();
     n+=(((359/phi_step_for_this_theta)+1)*((359/angle_step)+1)) ;
 
 }
-z_rotation<<<1,360>>(AnglesonGPU,n,angle_step,180);
+z_rotation<<<1,360>>>(AnglesonGPU,n,angle_step,180);
 cudaDeviceSynchronize();
 n+=(359/angle_step)+1;
 /************/
@@ -145,8 +145,10 @@ n+=(359/angle_step)+1;
   }
   int x=MAX_ROTATIONS*sizeof(int);
   cudaMemcpy(Angles.z_twist, AnglesonGPU.z_twist,x,cudaMemcpyDeviceToHost);
-  cudaMemcpy(Angles.theta AnglesonGPU.theta,x,cudaMemcpyDeviceToHost);
+  cudaMemcpy(Angles.theta,AnglesonGPU.theta,x,cudaMemcpyDeviceToHost);
   cudaMemcpy(Angles.phi, AnglesonGPU.phi,x,cudaMemcpyDeviceToHost);
+
+
 
   if( ( Angles.z_twist = ( int * ) realloc ( Angles.z_twist  , ( 1 + n ) * sizeof( int ) ) ) &&
       ( Angles.theta   = ( int * ) realloc ( Angles.theta    , ( 1 + n ) * sizeof( int ) ) ) &&
