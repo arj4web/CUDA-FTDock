@@ -27,6 +27,40 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 #include "structures.h"
+__global__ void assign_charges_on_GPU(struct Amino_Acid *Residue)
+{
+  residue=threadIdx.y;
+  atom=threadIdx.x;
+
+
+  if(residue>0&&atom>0){
+
+    Residue[residue].Atom[atom].charge = 0.0;
+    /* peptide backbone */
+
+    if( strcmp(Residue[residue].Atom[atom].atom_name , " N  " ) == 0 ) {
+        if( strcmp(Residue[residue].res_name , "PRO" ) == 0 ) {
+          Residue[residue].Atom[atom].charge = -0.10 ;
+        } else {
+          Residue[residue].Atom[atom].charge =  0.55 ;
+          if( residue == 1 )Residue[residue].Atom[atom].charge = 1.00 ;
+        }
+      }
+
+
+    if( strcmp( This_Structure.Residue[residue].Atom[atom].atom_name , " O  " ) == 0 ) {
+        This_Structure.Residue[residue].Atom[atom].charge = -0.55 ;
+        if( residue == This_Structure.length  ) This_Structure.Residue[residue].Atom[atom].charge = -1.00 ;
+      }
+     /* charged residues */
+
+      if( ( strcmp( This_Structure.Residue[residue].res_name , "ARG" ) == 0 ) && ( strncmp( This_Structure.Residue[residue].Atom[atom].atom_name , " NH" , 3 ) == 0 ) ) This_Structure.Residue[residue].Atom[atom].charge =  0.50 ;
+      if( ( strcmp( This_Structure.Residue[residue].res_name , "ASP" ) == 0 ) && ( strncmp( This_Structure.Residue[residue].Atom[atom].atom_name , " OD" , 3 ) == 0 ) ) This_Structure.Residue[residue].Atom[atom].charge = -0.50 ;
+      if( ( strcmp( This_Structure.Residue[residue].res_name , "GLU" ) == 0 ) && ( strncmp( This_Structure.Residue[residue].Atom[atom].atom_name , " OE" , 3 ) == 0 ) ) This_Structure.Residue[residue].Atom[atom].charge = -0.50 ;
+      if( ( strcmp( This_Structure.Residue[residue].res_name , "LYS" ) == 0 ) && ( strcmp( This_Structure.Residue[residue].Atom[atom].atom_name , " NZ " ) == 0 ) ) This_Structure.Residue[residue].Atom[atom].charge =  1.00 ;
+
+  }
+}
 
 void assign_charges( struct Structure This_Structure ) {
 
@@ -37,6 +71,20 @@ void assign_charges( struct Structure This_Structure ) {
   int	residue , atom ;
 
 /************/
+struct Amino_Acid Residue[This_Structure.length],*d_Residue;
+for (int i = 0; i < This_Structure.length; i++)
+{
+  Residue[i]=This_Structure.Residue[i];
+  cudaMalloc(&Residue[i].Atom,This_Structure.Residue[i].size*sizeof(struct Atom));
+  cudaMemcpy(Residue[i].Atom,This_Structure.Residue[i].Atom,This_Structure.Residue[i].size*sizeof(struct Atom),cudaMemcpyHostToDevice);
+  
+}
+cudaMalloc((void**)&d_Residue,This_Structure.length*sizeof(struct Amino_Acid));
+cudaMemcpy(d_Residue,Residue,This_Structure.length*sizeof(struct Amino_Acid),cudaMemcpyHostToDevice);
+
+
+
+
 
   for( residue = 1 ; residue <= This_Structure.length ; residue ++ ) {
     for( atom = 1 ; atom <= This_Structure.Residue[residue].size ; atom ++ ) {
