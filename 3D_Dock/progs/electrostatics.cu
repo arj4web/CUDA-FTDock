@@ -33,7 +33,7 @@ __global__ void assign_charges_on_GPU(struct Amino_Acid *Residue)
   atom=threadIdx.x;
 
 
-  if(residue>0&&atom>0){
+  if((residue>0)&&(atom>0)&&(atom<Residue[residue].size)){
 
     Residue[residue].Atom[atom].charge = 0.0;
     /* peptide backbone */
@@ -68,7 +68,7 @@ void assign_charges( struct Structure This_Structure ) {
 
   /* Counters */
 
-  int	residue , atom ;
+  int	residue , atom,a=0 ;
 
 /************/
 struct Amino_Acid Residue[This_Structure.length],*d_Residue;
@@ -77,46 +77,18 @@ for (int i = 0; i < This_Structure.length; i++)
   Residue[i]=This_Structure.Residue[i];
   cudaMalloc(&Residue[i].Atom,This_Structure.Residue[i].size*sizeof(struct Atom));
   cudaMemcpy(Residue[i].Atom,This_Structure.Residue[i].Atom,This_Structure.Residue[i].size*sizeof(struct Atom),cudaMemcpyHostToDevice);
+  a=max(a,This_Structure.Residue[i].size);
   
 }
 cudaMalloc((void**)&d_Residue,This_Structure.length*sizeof(struct Amino_Acid));
 cudaMemcpy(d_Residue,Residue,This_Structure.length*sizeof(struct Amino_Acid),cudaMemcpyHostToDevice);
 
-
-
-
-
-  for( residue = 1 ; residue <= This_Structure.length ; residue ++ ) {
-    for( atom = 1 ; atom <= This_Structure.Residue[residue].size ; atom ++ ) {
-
-      This_Structure.Residue[residue].Atom[atom].charge = 0.0 ;
-
-      /* peptide backbone */
-
-      if( strcmp( This_Structure.Residue[residue].Atom[atom].atom_name , " N  " ) == 0 ) {
-        if( strcmp( This_Structure.Residue[residue].res_name , "PRO" ) == 0 ) {
-          This_Structure.Residue[residue].Atom[atom].charge = -0.10 ;
-        } else {
-          This_Structure.Residue[residue].Atom[atom].charge =  0.55 ;
-          if( residue == 1 ) This_Structure.Residue[residue].Atom[atom].charge = 1.00 ;
-        }
-      }
-
-      if( strcmp( This_Structure.Residue[residue].Atom[atom].atom_name , " O  " ) == 0 ) {
-        This_Structure.Residue[residue].Atom[atom].charge = -0.55 ;
-        if( residue == This_Structure.length  ) This_Structure.Residue[residue].Atom[atom].charge = -1.00 ;
-      }
-
-      /* charged residues */
-
-      if( ( strcmp( This_Structure.Residue[residue].res_name , "ARG" ) == 0 ) && ( strncmp( This_Structure.Residue[residue].Atom[atom].atom_name , " NH" , 3 ) == 0 ) ) This_Structure.Residue[residue].Atom[atom].charge =  0.50 ;
-      if( ( strcmp( This_Structure.Residue[residue].res_name , "ASP" ) == 0 ) && ( strncmp( This_Structure.Residue[residue].Atom[atom].atom_name , " OD" , 3 ) == 0 ) ) This_Structure.Residue[residue].Atom[atom].charge = -0.50 ;
-      if( ( strcmp( This_Structure.Residue[residue].res_name , "GLU" ) == 0 ) && ( strncmp( This_Structure.Residue[residue].Atom[atom].atom_name , " OE" , 3 ) == 0 ) ) This_Structure.Residue[residue].Atom[atom].charge = -0.50 ;
-      if( ( strcmp( This_Structure.Residue[residue].res_name , "LYS" ) == 0 ) && ( strcmp( This_Structure.Residue[residue].Atom[atom].atom_name , " NZ " ) == 0 ) ) This_Structure.Residue[residue].Atom[atom].charge =  1.00 ;
-
-    }
-  }
-
+dim3 threadPerBlock(a,This_Structure.length);
+assign_charges_on_GPU<<<1,threadPerBlock>>>(d_Residue);
+cudaDeviceSynchronize;
+cudaMemcpy(This_Structure.Residue,d_Residue,This_Structure.length*sizeof(struct Amino_Acid),cudaMemcpyDeviceToHost);
+cudaFree(d_Residue);
+free(Residue);
 /************/
 
 }
