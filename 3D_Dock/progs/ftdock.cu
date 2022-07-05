@@ -476,8 +476,9 @@ int main( int argc , char *argv[] ) {
   printf( "Setting up Static Structure\n" ) ;
 
   /* Discretise and surface the Static Structure (need do only once) */
-  discretise_structure( Origin_Static_Structure , grid_span , global_grid_size , static_grid ) ;
-  printf( "  surfacing grid\n" ) ;
+  int size1 =global_grid_size * global_grid_size * ( 2 * ( global_grid_size / 2 + 1 ) );
+  discretise_structure( Origin_Static_Structure , grid_span , global_grid_size , static_grid,size1);
+  printf( "  surfacing grid\n") ;
   surface_grid( grid_span , global_grid_size , static_grid , surface , internal_value ) ;
 
   /* Calculate electic field at all grid nodes (need do only once) */
@@ -548,7 +549,7 @@ int main( int argc , char *argv[] ) {
      rotate_structure( Origin_Mobile_Structure , (int)Angles.z_twist[rotation] , (int)Angles.theta[rotation] , (int)Angles.phi[rotation] ) ;
 
     /* Discretise the rotated Mobile Structure */
-    discretise_structure( Rotated_at_Origin_Mobile_Structure , grid_span , global_grid_size , mobile_grid ) ;
+    discretise_structure( Rotated_at_Origin_Mobile_Structure , grid_span , global_grid_size , mobile_grid,size1 ) ;
 
     /* Electic point charge approximation onto grid calculations ( quicker than filed calculations by a long way! ) */
     if( electrostatics == 1 ) {

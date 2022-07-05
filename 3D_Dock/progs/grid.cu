@@ -28,7 +28,15 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "structures.h"
 
-void discretise_structure( struct Structure This_Structure , float grid_span , int grid_size , cufftReal *grid ) {
+__global__ void zero_interaction_grid(cufftReal *grid,int grid_size)
+{
+    x=threadIdx.x;
+    y=threadIdx.y;
+    z=threadIdx.z;
+    grid[gaddress(x,y,z,grid_size)] = (cufftReal)0;
+}
+
+void discretise_structure( struct Structure This_Structure , float grid_span , int grid_size , cufftReal *grid, int size1 ) {
 
 /************/
 
@@ -54,6 +62,14 @@ void discretise_structure( struct Structure This_Structure , float grid_span , i
   distance = 1.8 ;
 
 /************/
+dim3 threadsperblock(grid_size,grid_size,grid_size);
+
+cufftReal *gridonGPU;
+cudaMalloc((void**)&gridonGPU, size1*sizeof( cufftReal ));
+cudaMemcpy(gridonGPU,grid,size1,cudaMemcpyHostToDevice);
+zero_interaction_grid<<<1,threadsperblock>>>(gridonGPU,grid_size);
+cudaDeviceSynchronize();
+cudaMemcpy(grid,gridonGPU,size1,cudaMemcpyDeviceToHost);
 
   for( x = 0 ; x < grid_size ; x ++ ) {
     for( y = 0 ; y < grid_size ; y ++ ) {
