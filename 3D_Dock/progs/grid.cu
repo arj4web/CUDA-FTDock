@@ -36,10 +36,21 @@ __global__ void zero_interaction_grid(cufftReal *grid,int grid_size)
     grid[gaddress(x,y,z,grid_size)] = (cufftReal)0;
 }
 
-__global__ void interaction_grid()
+__global__ void interaction_grid(cufftReal *grid, Amino_Acid *Residue,float grid_span , int grid_size ,int steps)
 {
     residue=threadIdx.y;
     atom=threadIdx.x;
+     int	steps , x_step , y_step , z_step ;
+
+     float		x_centre , y_centre , z_centre ;
+
+  /* Variables */
+
+     float         distance , one_span ;
+     one_span = grid_span / (float)grid_size ;
+
+     distance = 1.8 ;
+
 
 
     if((residue>0)&&(atom>0)&&(atom<Residue[residue].size))
@@ -60,7 +71,7 @@ __global__ void interaction_grid()
 
             z_centre  = gcentre( z_step , grid_span , grid_size ) ;
 
-            if( pythagoras(Residue[residue].Atom[atom].coord[1] ,Residue[residue].Atom[atom].coord[2] ,Residue[residue].Atom[atom].coord[3] , x_centre , y_centre , z_centre ) < distance ) gridonGPU[gaddress(x_step,y_step,z_step,grid_size)] = (cufftReal)1 ;
+            if( pythagoras(Residue[residue].Atom[atom].coord[1] ,Residue[residue].Atom[atom].coord[2] ,Residue[residue].Atom[atom].coord[3] , x_centre , y_centre , z_centre ) < distance ) grid[gaddress(x_step,y_step,z_step,grid_size)] = (cufftReal)1 ;
 
           }
         }
@@ -69,6 +80,7 @@ __global__ void interaction_grid()
 
     }
 
+}
 }
 
 void discretise_structure( struct Structure This_Structure , float grid_span , int grid_size , cufftReal *grid, int size1 ) {
@@ -104,8 +116,7 @@ cudaMalloc((void**)&gridonGPU, size1*sizeof( cufftReal ));
 cudaMemcpy(gridonGPU,grid,size1,cudaMemcpyHostToDevice);
 zero_interaction_grid<<<1,threadsperblock>>>(gridonGPU,grid_size);
 cudaDeviceSynchronize();
-cudaMemcpy(grid,gridonGPU,size1,cudaMemcpyDeviceToHost);
-cudaFree(gridonGPU);
+
 
 /************/
 struct Amino_Acid Residue[This_Structure.length],*d_Residue;
@@ -120,38 +131,16 @@ for (int i = 0; i < This_Structure.length; i++)
 cudaMalloc((void**)&d_Residue,This_Structure.length*sizeof(struct Amino_Acid));
 cudaMemcpy(d_Residue,Residue,This_Structure.length*sizeof(struct Amino_Acid),cudaMemcpyHostToDevice);
 
-dim3 threadPerBlock(a,This_Structure.length);
+  dim3 threadPerBlock(a,This_Structure.length);
   steps = (int)( ( distance / one_span ) + 1.5 ) ;
-
-  for( residue = 1 ; residue <= This_Structure.length ; residue ++ ) {
-    for( atom = 1 ; atom <= This_Structure.Residue[residue].size ; atom ++ ) {
-
-      x = gord( This_Structure.Residue[residue].Atom[atom].coord[1] , grid_span , grid_size ) ;
-      y = gord( This_Structure.Residue[residue].Atom[atom].coord[2] , grid_span , grid_size ) ;
-      z = gord( This_Structure.Residue[residue].Atom[atom].coord[3] , grid_span , grid_size ) ;
-
-      for( x_step = max( ( x - steps ) , 0 ) ; x_step <= min( ( x + steps ) , ( grid_size - 1 ) ) ; x_step ++ ) {
-
-        x_centre  = gcentre( x_step , grid_span , grid_size ) ;
-
-        for( y_step = max( ( y - steps ) , 0 ) ; y_step <= min( ( y + steps ) , ( grid_size - 1 ) ) ; y_step ++ ) {
-
-          y_centre  = gcentre( y_step , grid_span , grid_size ) ;
-
-          for( z_step = max( ( z - steps ) , 0 ) ; z_step <= min( ( z + steps ) , ( grid_size - 1 ) ) ; z_step ++ ) {
-
-            z_centre  = gcentre( z_step , grid_span , grid_size ) ;
-
-            if( pythagoras( This_Structure.Residue[residue].Atom[atom].coord[1] , This_Structure.Residue[residue].Atom[atom].coord[2] , This_Structure.Residue[residue].Atom[atom].coord[3] , x_centre , y_centre , z_centre ) < distance ) grid[gaddress(x_step,y_step,z_step,grid_size)] = (cufftReal)1 ;
-
-          }
-        }
-      }
-
-    }
-  }
-
-/************/
+  interaction_grid<<<1,threadPerBlock>>>(gridonGPU, d_Residue, grid_span,grid_size,steps);
+  cudaDeviceSynchronize();
+  cudaMemcpy(grid,gridonGPU,size1,cudaMemcpyDeviceToHost);
+  cudaFree(gridonGPU);
+  cudaFree(d_Residue);
+  
+  free(Residue);
+  /************/
 
   return ;
 
