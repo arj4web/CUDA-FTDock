@@ -111,10 +111,8 @@ void discretise_structure( struct Structure This_Structure , float grid_span , i
 /************/
 dim3 threadsperblock(grid_size,grid_size,grid_size);
 
-cufftReal *gridonGPU;
-cudaMalloc((void**)&gridonGPU, size1*sizeof( cufftReal ));
-cudaMemcpy(gridonGPU,grid,size1,cudaMemcpyHostToDevice);
-zero_interaction_grid<<<1,threadsperblock>>>(gridonGPU,grid_size);
+
+zero_interaction_grid<<<1,threadsperblock>>>(grid,grid_size);
 cudaDeviceSynchronize();
 
 
@@ -133,10 +131,8 @@ cudaMemcpy(d_Residue,Residue,This_Structure.length*sizeof(struct Amino_Acid),cud
 
   dim3 threadPerBlock(a,This_Structure.length);
   steps = (int)( ( distance / one_span ) + 1.5 ) ;
-  interaction_grid<<<1,threadPerBlock>>>(gridonGPU, d_Residue, grid_span,grid_size,steps);
+  interaction_grid<<<1,threadPerBlock>>>(grid, d_Residue, grid_span,grid_size,steps);
   cudaDeviceSynchronize();
-  cudaMemcpy(grid,gridonGPU,size1,cudaMemcpyDeviceToHost);
-  cudaFree(gridonGPU);
   cudaFree(d_Residue);
   
   free(Residue);
