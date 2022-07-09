@@ -96,6 +96,14 @@ free(Residue);
 
 
 /************************/
+__global__ void zero_interaction_grid(cufftReal *grid,int grid_size)
+{
+    x=threadIdx.x;
+    y=threadIdx.y;
+    z=threadIdx.z;
+    grid[gaddress(x,y,z,grid_size)] = (cufftReal)0;
+}
+
 
 
 
@@ -119,15 +127,12 @@ void electric_field( struct Structure This_Structure , float grid_span , int gri
 
 /************/
 
-  for( x = 0 ; x < grid_size ; x ++ ) {
-    for( y = 0 ; y < grid_size ; y ++ ) {
-      for( z = 0 ; z < grid_size ; z ++ ) {
+dim3 threadsperblock(grid_size,grid_size,grid_size);
 
-        grid[gaddress(x,y,z,grid_size)] = (cufftReal)0 ;
 
-      }
-    }
-  }
+zero_interaction_grid<<<1,threadsperblock>>>(grid,grid_size);
+cudaDeviceSynchronize();
+
 
 /************/
 
