@@ -103,6 +103,58 @@ __global__ void zero_interaction_grid(cufftReal *grid,int grid_size)
     z=threadIdx.z;
     grid[gaddress(x,y,z,grid_size)] = (cufftReal)0;
 }
+__global__ void field_calculation()
+{
+   int residue=threadIdx.y;
+   int atom=threadIdx.x;
+   float		distance ;
+   float epsilon ;
+   if((residue>0)&&(atom>0)&&(atom<Residue[residue].size))
+   {
+      
+            if(Residue[residue].Atom[atom].charge != 0 ) {
+
+              distance = pythagoras( Residue[residue].Atom[atom].coord[1] , Residue[residue].Atom[atom].coord[2] , Residue[residue].Atom[atom].coord[3] , x_centre , y_centre , z_centre ) ;
+         
+              if( distance < 2.0 ) distance = 2.0 ;
+
+              if( distance >= 2.0 ) {
+
+                if( distance >= 8.0 ) {
+
+                  epsilon = 80 ;
+
+                } else { 
+
+                  if( distance <= 6.0 ) { 
+
+                    epsilon = 4 ;
+             
+                  } else {
+
+                    epsilon = ( 38 * distance ) - 224 ;
+
+                  }
+
+                }
+  
+                phi += (Residue[residue].Atom[atom].charge / ( epsilon * distance ) ) ;
+
+              }
+
+            }
+
+   }
+}
+__global__ void electric_fieldonGPU(cufftReal *grid,int grid_size,float grid_span)
+{
+    x=threadIdx.x;
+    y=threadIdx.y;
+    z=threadIdx.z;
+    x_centre  = gcentre( x , grid_span , grid_size ) ;
+    y_centre  = gcentre( y , grid_span , grid_size ) ;
+    z_centre  = gcentre( z , grid_span , grid_size ) ;
+}
 
 
 
@@ -132,7 +184,20 @@ dim3 threadsperblock(grid_size,grid_size,grid_size);
 
 zero_interaction_grid<<<1,threadsperblock>>>(grid,grid_size);
 cudaDeviceSynchronize();
+struct Amino_Acid Residue[This_Structure.length],*d_Residue;
+int a=0;
+for (int i = 0; i < This_Structure.length; i++)
+{
+  Residue[i]=This_Structure.Residue[i];
+  cudaMalloc(&Residue[i].Atom,This_Structure.Residue[i].size*sizeof(struct Atom));
+  cudaMemcpy(Residue[i].Atom,This_Structure.Residue[i].Atom,This_Structure.Residue[i].size*sizeof(struct Atom),cudaMemcpyHostToDevice);
+  a=max(a,This_Structure.Residue[i].size);
+  
+}
+cudaMalloc((void**)&d_Residue,This_Structure.length*sizeof(struct Amino_Acid));
+cudaMemcpy(d_Residue,Residue,This_Structure.length*sizeof(struct Amino_Acid),cudaMemcpyHostToDevice);
 
+  dim3 threadPerBlock(a,This_Structure.length);
 
 /************/
 

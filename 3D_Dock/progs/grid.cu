@@ -118,6 +118,7 @@ cudaDeviceSynchronize();
 
 /************/
 struct Amino_Acid Residue[This_Structure.length],*d_Residue;
+int a=0;
 for (int i = 0; i < This_Structure.length; i++)
 {
   Residue[i]=This_Structure.Residue[i];
