@@ -148,14 +148,15 @@ cudaMemcpy(d_Residue,Residue,This_Structure.length*sizeof(struct Amino_Acid),cud
 
 
 
-void surface_grid( float grid_span , int grid_size , cufftReal *grid , float surface , float internal_value ) {
+
+__global__ void surface_grid( float grid_span , int grid_size , cufftReal *grid , float surface , float internal_value ) {
 
 
 /************/
 
   /* Counters */
 
-  int	x , y , z ;
+  int	x=threadIdx.x , y=threadIdx.y , z=threadIdx.z ;
   int	steps , x_step , y_step , z_step ;
 
   /* Variables */
@@ -174,10 +175,7 @@ void surface_grid( float grid_span , int grid_size , cufftReal *grid , float sur
 
   steps = (int)( ( surface / one_span ) + 1.5 ) ;
 
-  for( x = 0 ; x < grid_size ; x ++ ) {
-    for( y = 0 ; y < grid_size ; y ++ ) {
-      for( z = 0 ; z < grid_size ; z ++ ) {
-
+  
         if( (int)grid[gaddress(x,y,z,grid_size)] == 1 ) {
 
           at_surface = 0 ;
@@ -199,10 +197,6 @@ void surface_grid( float grid_span , int grid_size , cufftReal *grid , float sur
           if( at_surface == 0 ) grid[gaddress(x,y,z,grid_size)] = (cufftReal)internal_value ;
 
         }
-
-      }
-    }
-  }
 
 /************/
 

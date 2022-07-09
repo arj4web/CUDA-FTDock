@@ -482,7 +482,8 @@ int main( int argc , char *argv[] ) {
   
   discretise_structure( Origin_Static_Structure , grid_span , global_grid_size , static_grid,size1);
   printf( "  surfacing grid\n") ;
-  surface_grid( grid_span , global_grid_size , static_grid , surface , internal_value ) ;
+  dim3 threadsperblock(global_grid_size,global_grid_size,global_grid_size);
+  surface_grid<<<1,threadsperblock>>>( grid_span , global_grid_size , static_grid , surface , internal_value ) ;
 
   /* Calculate electic field at all grid nodes (need do only once) */
   if( electrostatics == 1 ) {
