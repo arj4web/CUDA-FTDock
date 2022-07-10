@@ -146,11 +146,16 @@ __global__ void field_calculation(float *phi,Amino_Acid *Residue)
 
    }
 }
-__global__ void electric_fieldonGPU(cufftReal *grid,int grid_size,float grid_span)
+__global__ void electric_fieldonGPU(cufftReal *grid,int grid_size,float grid_span,float *phi,dim3 threadPerBlock, Amino_Acid *Residue)
 {
     x=threadIdx.x;
     y=threadIdx.y;
     z=threadIdx.z;
+    if (y==0&&z==0)
+    {
+      printf( "." );
+    }
+    
     x_centre  = gcentre( x , grid_span , grid_size ) ;
     y_centre  = gcentre( y , grid_span , grid_size ) ;
     z_centre  = gcentre( z , grid_span , grid_size ) ;
@@ -179,11 +184,13 @@ void electric_field( struct Structure This_Structure , float grid_span , int gri
   /* Variables */
 
   float		distance ;
-  float		phi , epsilon ;
+  float		*phi , epsilon ;
 
 /************/
 
 dim3 threadsperblock(grid_size,grid_size,grid_size);
+
+cudaMalloc((void**)&phi,sizeof(float));
 
 
 zero_interaction_grid<<<1,threadsperblock>>>(grid,grid_size);
@@ -201,7 +208,8 @@ for (int i = 0; i < This_Structure.length; i++)
 cudaMalloc((void**)&d_Residue,This_Structure.length*sizeof(struct Amino_Acid));
 cudaMemcpy(d_Residue,Residue,This_Structure.length*sizeof(struct Amino_Acid),cudaMemcpyHostToDevice);
 
-  dim3 threadPerBlock(a,This_Structure.length);
+  dim3 threadPerBlock1(a,This_Structure.length);
+
 
 /************/
 
@@ -209,67 +217,14 @@ cudaMemcpy(d_Residue,Residue,This_Structure.length*sizeof(struct Amino_Acid),cud
 
   printf( "  electric field calculations ( one dot / grid sheet ) " ) ;
 
-  for( x = 0 ; x < grid_size ; x ++ ) {//scope for cuda
-
-    printf( "." ) ;
-
-    x_centre  = gcentre( x , grid_span , grid_size ) ;
-
-    for( y = 0 ; y < grid_size ; y ++ ) {
-
-      y_centre  = gcentre( y , grid_span , grid_size ) ;
-
-      for( z = 0 ; z < grid_size ; z ++ ) {
-
-        z_centre  = gcentre( z , grid_span , grid_size ) ;
-
-        phi = 0 ;
-
-        for( residue = 1 ; residue <= This_Structure.length ; residue ++ ) {
-          for( atom = 1 ; atom <= This_Structure.Residue[residue].size ; atom ++ ) {
-
-            if( This_Structure.Residue[residue].Atom[atom].charge != 0 ) {
-
-              distance = pythagoras( This_Structure.Residue[residue].Atom[atom].coord[1] , This_Structure.Residue[residue].Atom[atom].coord[2] , This_Structure.Residue[residue].Atom[atom].coord[3] , x_centre , y_centre , z_centre ) ;
-         
-              if( distance < 2.0 ) distance = 2.0 ;
-
-              if( distance >= 2.0 ) {
-
-                if( distance >= 8.0 ) {
-
-                  epsilon = 80 ;
-
-                } else { 
-
-                  if( distance <= 6.0 ) { 
-
-                    epsilon = 4 ;
-             
-                  } else {
-
-                    epsilon = ( 38 * distance ) - 224 ;
-
-                  }
-
-                }
-  
-                phi += ( This_Structure.Residue[residue].Atom[atom].charge / ( epsilon * distance ) ) ;
-
-              }
-
-            }
-
-          }
-        }
-
-        grid[gaddress(x,y,z,grid_size)] = (cufftReal)phi ;
-
-      }
-    }
-  }
+  electric_fieldonGPU<<<1,threadPerBlock>>>(grid,grid_size,grid_span,phi,threadPerBlock1,d_Residue);
+  cudaDeviceSynchronize();
 
   printf( "\n" ) ;
+  cudaFree(d_Residue);
+  free(Residue);
+  cudaFree(phi);
+
 
 /************/
 
