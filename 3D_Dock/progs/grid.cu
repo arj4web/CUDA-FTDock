@@ -40,7 +40,7 @@ __global__ void interaction_grid(cufftReal *grid, Amino_Acid *Residue,float grid
 {
     int residue=threadIdx.y;
     int atom=threadIdx.x;
-     int	steps , x_step , y_step , z_step ;
+    int	steps , x_step , y_step , z_step ;
 
      float		x_centre , y_centre , z_centre ;
 

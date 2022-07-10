@@ -103,7 +103,7 @@ __global__ void zero_interaction_grid(cufftReal *grid,int grid_size)
     z=threadIdx.z;
     grid[gaddress(x,y,z,grid_size)] = (cufftReal)0;
 }
-__global__ void field_calculation()
+__global__ void field_calculation(float *phi,Amino_Acid *Residue)
 {
    int residue=threadIdx.y;
    int atom=threadIdx.x;
@@ -138,7 +138,7 @@ __global__ void field_calculation()
 
                 }
   
-                phi += (Residue[residue].Atom[atom].charge / ( epsilon * distance ) ) ;
+                *phi += (Residue[residue].Atom[atom].charge / ( epsilon * distance ) ) ;
 
               }
 
@@ -154,6 +154,10 @@ __global__ void electric_fieldonGPU(cufftReal *grid,int grid_size,float grid_spa
     x_centre  = gcentre( x , grid_span , grid_size ) ;
     y_centre  = gcentre( y , grid_span , grid_size ) ;
     z_centre  = gcentre( z , grid_span , grid_size ) ;
+    *phi=0;
+    field_calculation<<<1,threadPerBlock>>>(phi,Residue);
+    cudaDeviceSynchronize();
+    grid[gaddress(x,y,z,grid_size)] = (cufftReal)*phi ;
 }
 
 
