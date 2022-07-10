@@ -38,9 +38,9 @@ __global__ void zero_interaction_grid(cufftReal *grid,int grid_size)
 
 __global__ void interaction_grid(cufftReal *grid, Amino_Acid *Residue,float grid_span , int grid_size ,int steps)
 {
-    residue=threadIdx.y;
-    atom=threadIdx.x;
-     int	steps , x_step , y_step , z_step ;
+    int residue=threadIdx.y;
+    int atom=threadIdx.x;
+    int	steps , x_step , y_step , z_step ;
 
      float		x_centre , y_centre , z_centre ;
 
@@ -118,6 +118,7 @@ cudaDeviceSynchronize();
 
 /************/
 struct Amino_Acid Residue[This_Structure.length],*d_Residue;
+int a=0;
 for (int i = 0; i < This_Structure.length; i++)
 {
   Residue[i]=This_Structure.Residue[i];
