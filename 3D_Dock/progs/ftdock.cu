@@ -493,7 +493,7 @@ int main( int argc , char *argv[] ) {
 
   /* Fourier Transform the static grids (need do only once) */
   printf( "  one time forward FFT calculations\n" ) ;
-  result = cufftExecR2C( p ,static_grid , NULL ) ;
+  result = cufftExecR2C( p , static_grid , NULL ) ;
   if( electrostatics == 1 ) {
     result =cufftExecR2C( p , static_elec_grid , NULL ) ;
   }
@@ -549,8 +549,7 @@ int main( int argc , char *argv[] ) {
     if( ( rotation % 50 ) == 0 ) printf( "\nRotation number %5d\n" , rotation ) ;
 
     /* Rotate Mobile Structure */
-    Rotated_at_Origin_Mobile_Structure =
-     rotate_structure( Origin_Mobile_Structure , (int)Angles.z_twist[rotation] , (int)Angles.theta[rotation] , (int)Angles.phi[rotation] ) ;
+    Rotated_at_Origin_Mobile_Structure = rotate_structure( Origin_Mobile_Structure , (int)Angles.z_twist[rotation] , (int)Angles.theta[rotation] , (int)Angles.phi[rotation] ) ;
 
     /* Discretise the rotated Mobile Structure */
     discretise_structure( Rotated_at_Origin_Mobile_Structure , grid_span , global_grid_size , mobile_grid,size1 ) ;
