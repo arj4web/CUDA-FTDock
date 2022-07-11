@@ -29,8 +29,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "structures.h"
 __global__ void assign_charges_on_GPU(struct Amino_Acid *Residue)
 {
-  residue=threadIdx.y;
-  atom=threadIdx.x;
+  int residue=threadIdx.y;
+  int atom=threadIdx.x;
 
 
   if((residue>0)&&(atom>0)&&(atom<Residue[residue].size)){
@@ -329,28 +329,22 @@ void electric_point_charge( struct Structure This_Structure , float grid_span , 
 
 
 
-void electric_field_zero_core( int grid_size , cufftReal *elec_grid , cufftReal *surface_grid , float internal_value ) {
+__global__ void electric_field_zero_core( int grid_size , cufftReal *elec_grid , cufftReal *surface_grid , float internal_value ) {
 
 /************/
 
   /* Co-ordinates */
 
-  int	x , y , z ;
+  int	x=threadIdx.x,y=threadIdx.y,z=threadIdx.z;
 
 /************/
 
-  for( x = 0 ; x < grid_size ; x ++ ) {
-    for( y = 0 ; y < grid_size ; y ++ ) {
-      for( z = 0 ; z < grid_size ; z ++ ) {
-
+  
         if( surface_grid[gaddress(x,y,z,grid_size)] == (cufftReal)internal_value ) elec_grid[gaddress(x,y,z,grid_size)] = (cufftReal)0 ;
 
-      }
-    }
-  }
+
 
 /************/
 
-  return ;
 
 }
