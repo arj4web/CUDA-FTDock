@@ -488,12 +488,12 @@ int main( int argc , char *argv[] ) {
   /* Calculate electic field at all grid nodes (need do only once) */
   if( electrostatics == 1 ) {
     electric_field( Origin_Static_Structure , grid_span , global_grid_size , static_elec_grid ) ;
-    electric_field_zero_core( global_grid_size , static_elec_grid , static_grid , internal_value ) ;
+    electric_field_zero_core<<<1,threadsperblock>>>( global_grid_size , static_elec_grid , static_grid , internal_value ) ;
   }
 
   /* Fourier Transform the static grids (need do only once) */
   printf( "  one time forward FFT calculations\n" ) ;
-  result = cufftExecR2C( p , d_static_grid , NULL ) ;
+  result = cufftExecR2C( p ,static_grid , NULL ) ;
   if( electrostatics == 1 ) {
     result =cufftExecR2C( p , static_elec_grid , NULL ) ;
   }
