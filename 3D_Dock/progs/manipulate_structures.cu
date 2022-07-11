@@ -415,7 +415,7 @@ struct Structure translate_structure_onto_origin( struct Structure This_Structur
 
 /************************/
 
-__global__ void RotateonGPU()
+__global__ void RotateonGPU(Amino_Acid *Residue,int z_twist , int theta , int phi )
 {
   int residue=threadIdx.y;
   int atom=threadIdx.x;
@@ -456,7 +456,7 @@ struct Structure rotate_structure( struct Structure This_Structure , int z_twist
   float			post_theta_x , post_theta_y , post_theta_z ;
 
   /* Counters */
-  int		residue , atom ;
+  int		residue , atom,a=0 ;
 
 /************/
 
@@ -474,31 +474,11 @@ struct Structure rotate_structure( struct Structure This_Structure , int z_twist
   cudaMemcpy(d_Residue,Residue,This_Structure.length*sizeof(struct Amino_Acid),cudaMemcpyHostToDevice);
 
   dim3 threadPerBlock(a,This_Structure.length);
+  RotateonGPU<<<1,threadPerBlock>>>(d_Residue,z_twist,phi,theta);
 
 /************/
 
-  for( residue = 1 ; residue <= New_Structure.length ; residue ++ ) {
-
-    for( atom = 1 ; atom <= New_Structure.Residue[residue].size ; atom ++ ) {
-
-      /* Perform Z axis twist */
-      post_z_twist_x = New_Structure.Residue[residue].Atom[atom].coord[1] * cos( 0.017453293 * z_twist ) - New_Structure.Residue[residue].Atom[atom].coord[2] * sin( 0.017453293 * z_twist ) ;
-      post_z_twist_y = New_Structure.Residue[residue].Atom[atom].coord[1] * sin( 0.017453293 * z_twist ) + New_Structure.Residue[residue].Atom[atom].coord[2] * cos( 0.017453293 * z_twist ) ;
-      post_z_twist_z = New_Structure.Residue[residue].Atom[atom].coord[3] ;
-
-      /* Perform theta twist along plane of x-z */
-      post_theta_x = post_z_twist_z * sin( 0.017453293 * theta ) + post_z_twist_x * cos( 0.017453293 * theta ) ; 
-      post_theta_y = post_z_twist_y ;
-      post_theta_z = post_z_twist_z * cos( 0.017453293 * theta ) - post_z_twist_x * sin( 0.017453293 * theta ) ; 
-
-      /* Perform phi twist around z axis */
-      New_Structure.Residue[residue].Atom[atom].coord[1] = post_theta_x * cos( 0.017453293 * phi ) - post_theta_y * sin( 0.017453293 * phi ) ;
-      New_Structure.Residue[residue].Atom[atom].coord[2] = post_theta_x * sin( 0.017453293 * phi ) + post_theta_y * cos( 0.017453293 * phi ) ;
-      New_Structure.Residue[residue].Atom[atom].coord[3] = post_theta_z ;
-
-    }
-
-  }
+  cudaMemcpy(New_Structure.Residue,d_Residue,This_Structure.length*sizeof(struct Amino_Acid),cudaMemcpyDeviceToHost);
 
   return New_Structure ;
 
