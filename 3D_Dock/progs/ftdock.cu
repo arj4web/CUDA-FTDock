@@ -62,11 +62,57 @@ __global__ void init_score(Score *d_Scores)
       d_Scores[i].coord[3] = 0 ;
 
 }
-__global__ void get_score()
+__global__ void get_score(Score *d_Scores,cufftReal *convoluted_grid,int electrostatics)
 {
-  
-}
+    int x=threadIdx.x;
+    int y=threadIdx.y;
+    int z=threadIdx.z;
+    int i=0;
+    int global_grid_size=blockDim.x;
+    int fx = x ;
+    if( fx > ( global_grid_size / 2 ) ) fx -= global_grid_size ;
+    int fy = y ;
+    if( fy > ( global_grid_size / 2 ) ) fy -= global_grid_size ;
+    int fz = z ;
+    if( fz > ( global_grid_size / 2 ) ) fz -= global_grid_size ;
 
+    int xyz = z + ( 2 * ( global_grid_size / 2 + 1 ) ) * ( y + global_grid_size * x ) ;
+
+    if( ( electrostatics == 0 ) || ( convoluted_elec_grid[xyz] < 0 ) ) {
+
+         /* Scale factor from FFTs */
+        if( (int)convoluted_grid[xyz] != 0 ) {
+            convoluted_grid[xyz] /= ( global_grid_size * global_grid_size * global_grid_size ) ;
+        }
+
+        if( (int)convoluted_grid[xyz] > d_Scores[keep_per_rotation-1].score ) {
+
+          i = keep_per_rotation - 2 ;
+
+          while( ( (int)convoluted_grid[xyz] > d_Scores[i].score ) && ( i >= 0 ) ) {
+                d_Scores[i+1].score    = d_Scores[i].score ;
+                d_Scores[i+1].rpscore  = d_Scores[i].rpscore ;
+                d_Scores[i+1].coord[1] = d_Scores[i].coord[1] ;
+                d_Scores[i+1].coord[2] = d_Scores[i].coord[2] ;
+                d_Scores[i+1].coord[3] = d_Scores[i].coord[3] ;
+                i -- ;
+              }
+
+              d_Scores[i+1].score    = (int)convoluted_grid[xyz] ;
+              if( ( electrostatics != 0 ) && ( convoluted_elec_grid[xyz] < 0.1 ) ) {
+                d_Scores[i+1].rpscore  = (float)convoluted_elec_grid[xyz] ;
+              } else {
+                d_Scores[i+1].rpscore  = (float)0 ;
+              }
+              d_Scores[i+1].coord[1] = fx ;
+              d_Scores[i+1].coord[2] = fy ;
+              d_Scores[i+1].coord[3] = fz ;
+
+            }
+
+          }
+
+}
 int main( int argc , char *argv[] ) {
 
   /* index counters */
@@ -625,57 +671,7 @@ int main( int argc , char *argv[] ) {
     init_score<<<1,keep_per_rotation>>>(d_Scores);
     cudaDeviceSynchronize();
     get_score<<<1,threadsperblock>>>();
-    for( x = 0 ; x < global_grid_size ; x ++ ) {
-      fx = x ;
-      if( fx > ( global_grid_size / 2 ) ) fx -= global_grid_size ;
 
-      for( y = 0 ; y < global_grid_size ; y ++ ) {
-        fy = y ;
-        if( fy > ( global_grid_size / 2 ) ) fy -= global_grid_size ;
-
-        for( z = 0 ; z < global_grid_size ; z ++ ) {
-          fz = z ;
-          if( fz > ( global_grid_size / 2 ) ) fz -= global_grid_size ;
-
-          xyz = z + ( 2 * ( global_grid_size / 2 + 1 ) ) * ( y + global_grid_size * x ) ;
-
-          if( ( electrostatics == 0 ) || ( convoluted_elec_grid[xyz] < 0 ) ) {
-
-            /* Scale factor from FFTs */
-            if( (int)convoluted_grid[xyz] != 0 ) {
-              convoluted_grid[xyz] /= ( global_grid_size * global_grid_size * global_grid_size ) ;
-            }
-
-            if( (int)convoluted_grid[xyz] > d_Scores[keep_per_rotation-1].score ) {
-
-              i = keep_per_rotation - 2 ;
-
-              while( ( (int)convoluted_grid[xyz] > d_Scores[i].score ) && ( i >= 0 ) ) {
-                d_Scores[i+1].score    = d_Scores[i].score ;
-                d_Scores[i+1].rpscore  = d_Scores[i].rpscore ;
-                d_Scores[i+1].coord[1] = d_Scores[i].coord[1] ;
-                d_Scores[i+1].coord[2] = d_Scores[i].coord[2] ;
-                d_Scores[i+1].coord[3] = d_Scores[i].coord[3] ;
-                i -- ;
-              }
-
-              d_Scores[i+1].score    = (int)convoluted_grid[xyz] ;
-              if( ( electrostatics != 0 ) && ( convoluted_elec_grid[xyz] < 0.1 ) ) {
-                d_Scores[i+1].rpscore  = (float)convoluted_elec_grid[xyz] ;
-              } else {
-                d_Scores[i+1].rpscore  = (float)0 ;
-              }
-              d_Scores[i+1].coord[1] = fx ;
-              d_Scores[i+1].coord[2] = fy ;
-              d_Scores[i+1].coord[3] = fz ;
-
-            }
-
-          }
-
-        }
-      }
-    }
 
     if( rotation == 1 ) {
       if( ( ftdock_file = fopen( "scratch_scores.dat" , "w" ) ) == NULL ) {
