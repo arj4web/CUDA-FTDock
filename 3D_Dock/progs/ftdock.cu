@@ -30,6 +30,89 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <cuda_runtime.h>
 #include <cufftXt.h>
 #include <cufft.h>
+
+__global__ void convolution(cufftComplex *static_fsg,cufftComplex *multiple_fsg,cufftComplex *mobile_fsg,cufftComplex *static_elec_fsg,cufftComplex *mobile_elec_fsg,cufftComplex *multiple_elec_fsg,int electrostatics)
+{
+  int fx=threadIdx.x;
+  int fy=threadIdx.y;
+  int fz=threadIdx.z;
+  int global_grid_size=blockDim.x;
+  int fxyz = fz + ( global_grid_size/2 + 1 ) * ( fy + global_grid_size * fx ) ;
+
+          multiple_fsg[fxyz].x =
+           static_fsg[fxyz].x * mobile_fsg[fxyz].x + static_fsg[fxyz].y * mobile_fsg[fxyz].y;
+          multiple_fsg[fxyz].y =
+           static_fsg[fxyz].y * mobile_fsg[fxyz].x - static_fsg[fxyz].x * mobile_fsg[fxyz].y;
+           
+          if( electrostatics == 1 ) {
+            multiple_elec_fsg[fxyz].x =
+             static_elec_fsg[fxyz].x * mobile_elec_fsg[fxyz].x + static_elec_fsg[fxyz].y * mobile_elec_fsg[fxyz].y ;
+            multiple_elec_fsg[fxyz].y =
+             static_elec_fsg[fxyz].y * mobile_elec_fsg[fxyz].x - static_elec_fsg[fxyz].x * mobile_elec_fsg[fxyz].y ;
+          } 
+}
+
+__global__ void init_score(Score *d_Scores)
+{
+      int i=threadIdx.x;
+      d_Scores[i].score = 0 ;
+      d_Scores[i].rpscore = 0.0 ;
+      d_Scores[i].coord[1] = 0 ;
+      d_Scores[i].coord[2] = 0 ;
+      d_Scores[i].coord[3] = 0 ;
+
+}
+__global__ void get_score(Score *d_Scores,cufftReal *convoluted_grid,int electrostatics)
+{
+    int x=threadIdx.x;
+    int y=threadIdx.y;
+    int z=threadIdx.z;
+    int i=0;
+    int global_grid_size=blockDim.x;
+    int fx = x ;
+    if( fx > ( global_grid_size / 2 ) ) fx -= global_grid_size ;
+    int fy = y ;
+    if( fy > ( global_grid_size / 2 ) ) fy -= global_grid_size ;
+    int fz = z ;
+    if( fz > ( global_grid_size / 2 ) ) fz -= global_grid_size ;
+
+    int xyz = z + ( 2 * ( global_grid_size / 2 + 1 ) ) * ( y + global_grid_size * x ) ;
+
+    if( ( electrostatics == 0 ) || ( convoluted_elec_grid[xyz] < 0 ) ) {
+
+         /* Scale factor from FFTs */
+        if( (int)convoluted_grid[xyz] != 0 ) {
+            convoluted_grid[xyz] /= ( global_grid_size * global_grid_size * global_grid_size ) ;
+        }
+
+        if( (int)convoluted_grid[xyz] > d_Scores[keep_per_rotation-1].score ) {
+
+          i = keep_per_rotation - 2 ;
+
+          while( ( (int)convoluted_grid[xyz] > d_Scores[i].score ) && ( i >= 0 ) ) {
+                d_Scores[i+1].score    = d_Scores[i].score ;
+                d_Scores[i+1].rpscore  = d_Scores[i].rpscore ;
+                d_Scores[i+1].coord[1] = d_Scores[i].coord[1] ;
+                d_Scores[i+1].coord[2] = d_Scores[i].coord[2] ;
+                d_Scores[i+1].coord[3] = d_Scores[i].coord[3] ;
+                i -- ;
+              }
+
+              d_Scores[i+1].score    = (int)convoluted_grid[xyz] ;
+              if( ( electrostatics != 0 ) && ( convoluted_elec_grid[xyz] < 0.1 ) ) {
+                d_Scores[i+1].rpscore  = (float)convoluted_elec_grid[xyz] ;
+              } else {
+                d_Scores[i+1].rpscore  = (float)0 ;
+              }
+              d_Scores[i+1].coord[1] = fx ;
+              d_Scores[i+1].coord[2] = fy ;
+              d_Scores[i+1].coord[3] = fz ;
+
+            }
+
+          }
+
+}
 int main( int argc , char *argv[] ) {
 
   /* index counters */
@@ -110,7 +193,7 @@ int main( int argc , char *argv[] ) {
 
   /* Scores */
 
-  struct Score	*Scores ;
+  struct Score	*Scores, *d_Scores ;
   float		max_es_value ;
 
 /************/
@@ -572,29 +655,9 @@ int main( int argc , char *argv[] ) {
        fourier grid with other (raw) one
        hence the sign changes from a normal complex number multiplication
     */
-
-    for( fx = 0 ; fx < global_grid_size ; fx ++ ) {
-      for( fy = 0 ; fy < global_grid_size ; fy ++ ) {
-        for( fz = 0 ; fz < global_grid_size/2 + 1 ; fz ++ ) {
-
-          fxyz = fz + ( global_grid_size/2 + 1 ) * ( fy + global_grid_size * fx ) ;
-
-          multiple_fsg[fxyz].x =
-           static_fsg[fxyz].x * mobile_fsg[fxyz].x + static_fsg[fxyz].y * mobile_fsg[fxyz].y;
-          multiple_fsg[fxyz].y =
-           static_fsg[fxyz].y * mobile_fsg[fxyz].x - static_fsg[fxyz].x * mobile_fsg[fxyz].y;
-           
-          if( electrostatics == 1 ) {
-            multiple_elec_fsg[fxyz].x =
-             static_elec_fsg[fxyz].x * mobile_elec_fsg[fxyz].x + static_elec_fsg[fxyz].y * mobile_elec_fsg[fxyz].y ;
-            multiple_elec_fsg[fxyz].y =
-             static_elec_fsg[fxyz].y * mobile_elec_fsg[fxyz].x - static_elec_fsg[fxyz].x * mobile_elec_fsg[fxyz].y ;
-          }
-
-        }
-      }
-    }
-
+   dim3 threadsperblockconvo(global_grid_size,global_grid_size,(global_grid_size/2)+1);
+   convolution<<<1,threadsperblockconvo>>>(static_fsg,multiple_fsg,mobile_fsg,static_elec_fsg,mobile_elec_fsg,multiple_elec_fsg,electrostatics);
+   cudaDeviceSynchronize();
     /* Reverse Fourier Transform */
     result = cufftExecC2R( pinv , multiple_fsg , NULL ) ;
     if( electrostatics == 1 ) {
@@ -604,69 +667,14 @@ int main( int argc , char *argv[] ) {
 /************/
 
     /* Get best scores */
+    cudaMalloc((void**)&d_Scores,( keep_per_rotation + 2 ) * sizeof( struct Score ));
+    init_score<<<1,keep_per_rotation>>>(d_Scores);
+    cudaDeviceSynchronize();
+    get_score<<<1,threadsperblock>>>(d_Scores,convoluted_grid.electrostatics);
+    cudaDeviceSynchronize();
+    cudaMemcpy(Scores,d_Scores,( keep_per_rotation + 2 ) * sizeof( struct Score ),cudaMemcpyDeviceToHost);
 
-    for( i = 0 ; i < keep_per_rotation ; i ++ ) {
-
-      Scores[i].score = 0 ;
-      Scores[i].rpscore = 0.0 ;
-      Scores[i].coord[1] = 0 ;
-      Scores[i].coord[2] = 0 ;
-      Scores[i].coord[3] = 0 ;
-
-    }
-
-    for( x = 0 ; x < global_grid_size ; x ++ ) {
-      fx = x ;
-      if( fx > ( global_grid_size / 2 ) ) fx -= global_grid_size ;
-
-      for( y = 0 ; y < global_grid_size ; y ++ ) {
-        fy = y ;
-        if( fy > ( global_grid_size / 2 ) ) fy -= global_grid_size ;
-
-        for( z = 0 ; z < global_grid_size ; z ++ ) {
-          fz = z ;
-          if( fz > ( global_grid_size / 2 ) ) fz -= global_grid_size ;
-
-          xyz = z + ( 2 * ( global_grid_size / 2 + 1 ) ) * ( y + global_grid_size * x ) ;
-
-          if( ( electrostatics == 0 ) || ( convoluted_elec_grid[xyz] < 0 ) ) {
-
-            /* Scale factor from FFTs */
-            if( (int)convoluted_grid[xyz] != 0 ) {
-              convoluted_grid[xyz] /= ( global_grid_size * global_grid_size * global_grid_size ) ;
-            }
-
-            if( (int)convoluted_grid[xyz] > Scores[keep_per_rotation-1].score ) {
-
-              i = keep_per_rotation - 2 ;
-
-              while( ( (int)convoluted_grid[xyz] > Scores[i].score ) && ( i >= 0 ) ) {
-                Scores[i+1].score    = Scores[i].score ;
-                Scores[i+1].rpscore  = Scores[i].rpscore ;
-                Scores[i+1].coord[1] = Scores[i].coord[1] ;
-                Scores[i+1].coord[2] = Scores[i].coord[2] ;
-                Scores[i+1].coord[3] = Scores[i].coord[3] ;
-                i -- ;
-              }
-
-              Scores[i+1].score    = (int)convoluted_grid[xyz] ;
-              if( ( electrostatics != 0 ) && ( convoluted_elec_grid[xyz] < 0.1 ) ) {
-                Scores[i+1].rpscore  = (float)convoluted_elec_grid[xyz] ;
-              } else {
-                Scores[i+1].rpscore  = (float)0 ;
-              }
-              Scores[i+1].coord[1] = fx ;
-              Scores[i+1].coord[2] = fy ;
-              Scores[i+1].coord[3] = fz ;
-
-            }
-
-          }
-
-        }
-      }
-    }
-
+    
     if( rotation == 1 ) {
       if( ( ftdock_file = fopen( "scratch_scores.dat" , "w" ) ) == NULL ) {
         printf( "Could not open scratch_scores.dat for writing.\nDying\n\n" ) ;
@@ -681,9 +689,9 @@ int main( int argc , char *argv[] ) {
 
     for( i = 0 ; i < keep_per_rotation ; i ++ ) {
 
-      max_es_value = min( max_es_value , Scores[i].rpscore ) ;
+      max_es_value = min( max_es_value , d_Scores[i].rpscore ) ;
       fprintf( ftdock_file, "G_DATA %6d   %6d    %7d       %.0f      %4d %4d %4d      %4d%4d%4d\n" ,
-                rotation , 0 , Scores[i].score , (double)Scores[i].rpscore , Scores[i].coord[1] , Scores[i].coord[2] , Scores[i].coord[3 ] ,
+                rotation , 0 , d_Scores[i].score , (double)d_Scores[i].rpscore , d_Scores[i].coord[1] , d_Scores[i].coord[2] , d_Scores[i].coord[3 ] ,
                  Angles.z_twist[rotation] , Angles.theta[rotation]  , Angles.phi[rotation] ) ;
 
     }
@@ -750,14 +758,14 @@ int main( int argc , char *argv[] ) {
     sscanf( line_buffer , "G_DATA %d %d %d %f  %d %d %d  %d %d %d" , &id , &id2 , &SCscore , &RPscore ,
                                                                      &x , &y , &z , &z_twist , &theta , &phi ) ;
 
-    Scores[kept_scores].score    = SCscore ;
-    Scores[kept_scores].rpscore  = RPscore ;
-    Scores[kept_scores].coord[1] = x ;
-    Scores[kept_scores].coord[2] = y ;
-    Scores[kept_scores].coord[3] = z ;
-    Scores[kept_scores].angle[1] = z_twist ;
-    Scores[kept_scores].angle[2] = theta ;
-    Scores[kept_scores].angle[3] = phi ;
+    d_Scores[kept_scores].score    = SCscore ;
+    d_Scores[kept_scores].rpscore  = RPscore ;
+    d_Scores[kept_scores].coord[1] = x ;
+    d_Scores[kept_scores].coord[2] = y ;
+    d_Scores[kept_scores].coord[3] = z ;
+    d_Scores[kept_scores].angle[1] = z_twist ;
+    d_Scores[kept_scores].angle[2] = theta ;
+    d_Scores[kept_scores].angle[3] = phi ;
 
     kept_scores ++ ;
 
@@ -810,9 +818,9 @@ int main( int argc , char *argv[] ) {
     for( i = 0 ; i <= min( kept_scores , ( NUMBER_TO_KEEP - 1 ) ) ; i ++ ) {
 
       fprintf( ftdock_file, "G_DATA %6d   %6d    %7d       %8.3f      %4d %4d %4d      %4d%4d%4d\n" ,
-               i + 1 , 0 , Scores[i].score , 100 * ( Scores[i].rpscore / max_es_value ) ,
-               Scores[i].coord[1] , Scores[i].coord[2] , Scores[i].coord[3] ,
-               Scores[i].angle[1] , Scores[i].angle[2] , Scores[i].angle[3] ) ;
+               i + 1 , 0 , d_Scores[i].score , 100 * ( d_Scores[i].rpscore / max_es_value ) ,
+               d_Scores[i].coord[1] , d_Scores[i].coord[2] , d_Scores[i].coord[3] ,
+               d_Scores[i].angle[1] , d_Scores[i].angle[2] , d_Scores[i].angle[3] ) ;
 
     }
 
@@ -821,9 +829,9 @@ int main( int argc , char *argv[] ) {
     for( i = 0 ; i <= min( kept_scores , ( NUMBER_TO_KEEP - 1 ) ) ; i ++ ) {
 
       fprintf( ftdock_file, "G_DATA %6d   %6d    %7d       %8.3f      %4d %4d %4d      %4d%4d%4d\n" ,
-               i + 1 , 0 , Scores[i].score , 0.0 ,
-               Scores[i].coord[1] , Scores[i].coord[2] , Scores[i].coord[3] ,
-               Scores[i].angle[1] , Scores[i].angle[2] , Scores[i].angle[3] ) ;
+               i + 1 , 0 , d_Scores[i].score , 0.0 ,
+               d_Scores[i].coord[1] , d_Scores[i].coord[2] , d_Scores[i].coord[3] ,
+               d_Scores[i].angle[1] , d_Scores[i].angle[2] , d_Scores[i].angle[3] ) ;
 
     }
 
