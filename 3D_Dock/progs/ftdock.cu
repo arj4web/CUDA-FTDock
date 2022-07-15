@@ -30,6 +30,28 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <cuda_runtime.h>
 #include <cufftXt.h>
 #include <cufft.h>
+
+__global__ void convolution(cufftComplex *static_fsg,cufftComplex *multiple_fsg,cufftComplex *mobile_fsg,cufftComplex *static_elec_fsg,cufftComplex *mobile_elec_fsg,cufftComplex *multiple_elec_fsg,int electrostatics)
+{
+  int fx=threadIdx.x;
+  int fy=threadIdx.y;
+  int fz=threadIdx.z;
+  int global_grid_size=blockDim.x;
+  int fxyz = fz + ( global_grid_size/2 + 1 ) * ( fy + global_grid_size * fx ) ;
+
+          multiple_fsg[fxyz].x =
+           static_fsg[fxyz].x * mobile_fsg[fxyz].x + static_fsg[fxyz].y * mobile_fsg[fxyz].y;
+          multiple_fsg[fxyz].y =
+           static_fsg[fxyz].y * mobile_fsg[fxyz].x - static_fsg[fxyz].x * mobile_fsg[fxyz].y;
+           
+          if( electrostatics == 1 ) {
+            multiple_elec_fsg[fxyz].x =
+             static_elec_fsg[fxyz].x * mobile_elec_fsg[fxyz].x + static_elec_fsg[fxyz].y * mobile_elec_fsg[fxyz].y ;
+            multiple_elec_fsg[fxyz].y =
+             static_elec_fsg[fxyz].y * mobile_elec_fsg[fxyz].x - static_elec_fsg[fxyz].x * mobile_elec_fsg[fxyz].y ;
+          } 
+}
+
 int main( int argc , char *argv[] ) {
 
   /* index counters */
@@ -572,29 +594,9 @@ int main( int argc , char *argv[] ) {
        fourier grid with other (raw) one
        hence the sign changes from a normal complex number multiplication
     */
-
-    for( fx = 0 ; fx < global_grid_size ; fx ++ ) {
-      for( fy = 0 ; fy < global_grid_size ; fy ++ ) {
-        for( fz = 0 ; fz < global_grid_size/2 + 1 ; fz ++ ) {
-
-          fxyz = fz + ( global_grid_size/2 + 1 ) * ( fy + global_grid_size * fx ) ;
-
-          multiple_fsg[fxyz].x =
-           static_fsg[fxyz].x * mobile_fsg[fxyz].x + static_fsg[fxyz].y * mobile_fsg[fxyz].y;
-          multiple_fsg[fxyz].y =
-           static_fsg[fxyz].y * mobile_fsg[fxyz].x - static_fsg[fxyz].x * mobile_fsg[fxyz].y;
-           
-          if( electrostatics == 1 ) {
-            multiple_elec_fsg[fxyz].x =
-             static_elec_fsg[fxyz].x * mobile_elec_fsg[fxyz].x + static_elec_fsg[fxyz].y * mobile_elec_fsg[fxyz].y ;
-            multiple_elec_fsg[fxyz].y =
-             static_elec_fsg[fxyz].y * mobile_elec_fsg[fxyz].x - static_elec_fsg[fxyz].x * mobile_elec_fsg[fxyz].y ;
-          }
-
-        }
-      }
-    }
-
+   dim3 threadsperblockconvo(global_grid_size,global_grid_size,(global_grid_size/2)+1);
+   convolution<<<1,threadsperblockconvo>>>(static_fsg,multiple_fsg,mobile_fsg,static_elec_fsg,mobile_elec_fsg,multiple_elec_fsg,electrostatics);
+   
     /* Reverse Fourier Transform */
     result = cufftExecC2R( pinv , multiple_fsg , NULL ) ;
     if( electrostatics == 1 ) {
