@@ -674,7 +674,7 @@ int main( int argc , char *argv[] ) {
     cudaDeviceSynchronize();
     cudaMemcpy(Scores,d_Scores,( keep_per_rotation + 2 ) * sizeof( struct Score ),cudaMemcpyDeviceToHost);
 
-
+    
     if( rotation == 1 ) {
       if( ( ftdock_file = fopen( "scratch_scores.dat" , "w" ) ) == NULL ) {
         printf( "Could not open scratch_scores.dat for writing.\nDying\n\n" ) ;
