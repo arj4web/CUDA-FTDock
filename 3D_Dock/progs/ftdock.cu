@@ -670,7 +670,9 @@ int main( int argc , char *argv[] ) {
     cudaMalloc((void**)&d_Scores,( keep_per_rotation + 2 ) * sizeof( struct Score ));
     init_score<<<1,keep_per_rotation>>>(d_Scores);
     cudaDeviceSynchronize();
-    get_score<<<1,threadsperblock>>>();
+    get_score<<<1,threadsperblock>>>(d_Scores,convoluted_grid.electrostatics);
+    cudaDeviceSynchronize();
+    cudaMemcpy(Scores,d_Scores,( keep_per_rotation + 2 ) * sizeof( struct Score ),cudaMemcpyDeviceToHost);
 
 
     if( rotation == 1 ) {
