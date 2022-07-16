@@ -34,7 +34,7 @@ __global__ void z_rotation(Angle Angles,int n,int angle_step,int theta)
     if(i%angle_step==0)
     {
       int z=n+(i/angle_step)+1;
-      Angles.z_twist[z] = i/angle_step ;
+      Angles.z_twist[z] = i;
       Angles.theta[z]   = theta ;
       Angles.phi[z]     = 0 ;
     }
@@ -52,9 +52,9 @@ __global__ void all_rotation(Angle Angles,int n,int angle_step,int phi_step_for_
         if(z_twist%angle_step==0)
         {
           int k=((phi/phi_step_for_this_theta)*((359/angle_step)+1))+(z_twist/angle_step)+1;
-          Angles.z_twist[n+k] = z_twist/angle_step ;
+          Angles.z_twist[n+k] = z_twist;
           Angles.theta[n+k]   = theta ;
-          Angles.phi[n+k]     = phi/phi_step_for_this_theta ;
+          Angles.phi[n+k]     = phi;
 
         }
       }
