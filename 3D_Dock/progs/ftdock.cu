@@ -62,7 +62,7 @@ __global__ void init_score(Score *d_Scores)
       d_Scores[i].coord[3] = 0 ;
 
 }
-__global__ void get_score(Score *d_Scores,cufftReal *convoluted_grid,int electrostatics)
+__global__ void get_score(Score *d_Scores,cufftReal *convoluted_grid,cufftReal *convoluted_elec_grid, int electrostatics,int keep_per_rotation)
 {
     int x=threadIdx.x;
     int y=threadIdx.y;
@@ -169,9 +169,9 @@ int main( int argc , char *argv[] ) {
 
   float		grid_span , one_span ;
 
-  cufftReal	*static_grid,d_static_grid ;
-  cufftReal	*mobile_grid, d_mobile_grid ;
-  cufftReal	*convoluted_grid, d_convoluted_grid ;
+  cufftReal	*static_grid;
+  cufftReal	*mobile_grid;
+  cufftReal	*convoluted_grid;
 
   cufftReal	*static_elec_grid;
   cufftReal	*mobile_elec_grid;
