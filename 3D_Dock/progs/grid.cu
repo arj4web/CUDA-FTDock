@@ -30,9 +30,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 __global__ void zero_interaction_grid(cufftReal *grid,int grid_size)
 {
-    x=threadIdx.x;
-    y=threadIdx.y;
-    z=threadIdx.z;
+    int x=threadIdx.x;
+    int y=threadIdx.y;
+    int z=threadIdx.z;
     grid[gaddress(x,y,z,grid_size)] = (cufftReal)0;
 }
 
@@ -40,7 +40,7 @@ __global__ void interaction_grid(cufftReal *grid, Amino_Acid *Residue,float grid
 {
     int residue=threadIdx.y;
     int atom=threadIdx.x;
-    int	steps , x_step , y_step , z_step ;
+    int x_step , y_step , z_step ;
 
      float		x_centre , y_centre , z_centre ;
 
@@ -55,6 +55,8 @@ __global__ void interaction_grid(cufftReal *grid, Amino_Acid *Residue,float grid
 
     if((residue>0)&&(atom>0)&&(atom<Residue[residue].size))
     {
+
+        
         int x = gord(Residue[residue].Atom[atom].coord[1] , grid_span , grid_size );
         int y = gord(Residue[residue].Atom[atom].coord[2] , grid_span , grid_size );
         int z = gord(Residue[residue].Atom[atom].coord[3] , grid_span , grid_size );
@@ -117,7 +119,8 @@ cudaDeviceSynchronize();
 
 
 /************/
-struct Amino_Acid Residue[This_Structure.length],*d_Residue;
+struct Amino_Acid *Residue,*d_Residue;
+Residue = (struct Amino_Acid*)malloc(This_Structure.length*sizeof(Amino_Acid));
 int a=0;
 for (int i = 0; i < This_Structure.length; i++)
 {

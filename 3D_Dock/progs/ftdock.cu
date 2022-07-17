@@ -62,7 +62,7 @@ __global__ void init_score(Score *d_Scores)
       d_Scores[i].coord[3] = 0 ;
 
 }
-__global__ void get_score(Score *d_Scores,cufftReal *convoluted_grid,int electrostatics)
+__global__ void get_score(Score *d_Scores,cufftReal *convoluted_grid,cufftReal *convoluted_elec_grid, int electrostatics,int keep_per_rotation)
 {
     int x=threadIdx.x;
     int y=threadIdx.y;
@@ -169,9 +169,9 @@ int main( int argc , char *argv[] ) {
 
   float		grid_span , one_span ;
 
-  cufftReal	*static_grid,d_static_grid ;
-  cufftReal	*mobile_grid, d_mobile_grid ;
-  cufftReal	*convoluted_grid, d_convoluted_grid ;
+  cufftReal	*static_grid;
+  cufftReal	*mobile_grid;
+  cufftReal	*convoluted_grid;
 
   cufftReal	*static_elec_grid;
   cufftReal	*mobile_elec_grid;
@@ -670,10 +670,10 @@ int main( int argc , char *argv[] ) {
     cudaMalloc((void**)&d_Scores,( keep_per_rotation + 2 ) * sizeof( struct Score ));
     init_score<<<1,keep_per_rotation>>>(d_Scores);
     cudaDeviceSynchronize();
-    get_score<<<1,threadsperblock>>>(d_Scores,convoluted_grid.electrostatics);
+    get_score<<<1,threadsperblock>>>(d_Scores,convoluted_grid,convoluted_elec_grid,electrostatics,keep_per_rotation);
     cudaDeviceSynchronize();
     cudaMemcpy(Scores,d_Scores,( keep_per_rotation + 2 ) * sizeof( struct Score ),cudaMemcpyDeviceToHost);
-
+    cudaFree(d_Scores);
     
     if( rotation == 1 ) {
       if( ( ftdock_file = fopen( "scratch_scores.dat" , "w" ) ) == NULL ) {
@@ -691,7 +691,7 @@ int main( int argc , char *argv[] ) {
 
       max_es_value = min( max_es_value , d_Scores[i].rpscore ) ;
       fprintf( ftdock_file, "G_DATA %6d   %6d    %7d       %.0f      %4d %4d %4d      %4d%4d%4d\n" ,
-                rotation , 0 , d_Scores[i].score , (double)d_Scores[i].rpscore , d_Scores[i].coord[1] , d_Scores[i].coord[2] , d_Scores[i].coord[3 ] ,
+                rotation , 0 , Scores[i].score , (double)Scores[i].rpscore , Scores[i].coord[1] , Scores[i].coord[2] , Scores[i].coord[3] ,
                  Angles.z_twist[rotation] , Angles.theta[rotation]  , Angles.phi[rotation] ) ;
 
     }
@@ -758,14 +758,14 @@ int main( int argc , char *argv[] ) {
     sscanf( line_buffer , "G_DATA %d %d %d %f  %d %d %d  %d %d %d" , &id , &id2 , &SCscore , &RPscore ,
                                                                      &x , &y , &z , &z_twist , &theta , &phi ) ;
 
-    d_Scores[kept_scores].score    = SCscore ;
-    d_Scores[kept_scores].rpscore  = RPscore ;
-    d_Scores[kept_scores].coord[1] = x ;
-    d_Scores[kept_scores].coord[2] = y ;
-    d_Scores[kept_scores].coord[3] = z ;
-    d_Scores[kept_scores].angle[1] = z_twist ;
-    d_Scores[kept_scores].angle[2] = theta ;
-    d_Scores[kept_scores].angle[3] = phi ;
+    Scores[kept_scores].score    = SCscore ;
+    Scores[kept_scores].rpscore  = RPscore ;
+    Scores[kept_scores].coord[1] = x ;
+    Scores[kept_scores].coord[2] = y ;
+    Scores[kept_scores].coord[3] = z ;
+    Scores[kept_scores].angle[1] = z_twist ;
+    Scores[kept_scores].angle[2] = theta ;
+    Scores[kept_scores].angle[3] = phi ;
 
     kept_scores ++ ;
 
@@ -818,9 +818,9 @@ int main( int argc , char *argv[] ) {
     for( i = 0 ; i <= min( kept_scores , ( NUMBER_TO_KEEP - 1 ) ) ; i ++ ) {
 
       fprintf( ftdock_file, "G_DATA %6d   %6d    %7d       %8.3f      %4d %4d %4d      %4d%4d%4d\n" ,
-               i + 1 , 0 , d_Scores[i].score , 100 * ( d_Scores[i].rpscore / max_es_value ) ,
-               d_Scores[i].coord[1] , d_Scores[i].coord[2] , d_Scores[i].coord[3] ,
-               d_Scores[i].angle[1] , d_Scores[i].angle[2] , d_Scores[i].angle[3] ) ;
+               i + 1 , 0 , Scores[i].score , 100 * ( Scores[i].rpscore / max_es_value ) ,
+               Scores[i].coord[1] , Scores[i].coord[2] , Scores[i].coord[3] ,
+               Scores[i].angle[1] , Scores[i].angle[2] , Scores[i].angle[3] ) ;
 
     }
 
@@ -829,9 +829,9 @@ int main( int argc , char *argv[] ) {
     for( i = 0 ; i <= min( kept_scores , ( NUMBER_TO_KEEP - 1 ) ) ; i ++ ) {
 
       fprintf( ftdock_file, "G_DATA %6d   %6d    %7d       %8.3f      %4d %4d %4d      %4d%4d%4d\n" ,
-               i + 1 , 0 , d_Scores[i].score , 0.0 ,
-               d_Scores[i].coord[1] , d_Scores[i].coord[2] , d_Scores[i].coord[3] ,
-               d_Scores[i].angle[1] , d_Scores[i].angle[2] , d_Scores[i].angle[3] ) ;
+               i + 1 , 0 , Scores[i].score , 0.0 ,
+               Scores[i].coord[1] , Scores[i].coord[2] , Scores[i].coord[3] ,
+               Scores[i].angle[1] , Scores[i].angle[2] , Scores[i].angle[3] ) ;
 
     }
 

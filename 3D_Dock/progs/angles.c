@@ -1,69 +1,28 @@
 /*
 This file is part of ftdock, a program for rigid-body protein-protein docking 
 Copyright (C) 1997-2000 Henry Gabb/Gidon Moont
-
 Biomolecular Modelling Laboratory
 Imperial Cancer Research Fund
 44 Lincoln's Inn Fields
 London WC2A 3PX
-
 +44 (0)20 7269 3565
 http://www.bmm.icnet.uk/
-
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
 as published by the Free Software Foundation; either version 2
 of the License, or (at your option) any later version.
-
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
-
 You should have received a copy of the GNU General Public License
 along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
-
 */
 
 #include "structures.h"
 
-__global__ void z_rotation(Angle Angles,int n,int angle_step,int theta)
-{
-    int i=threadIdx.x;
-    if(i%angle_step==0)
-    {
-      int z=n+(i/angle_step)+1;
-      Angles.z_twist[z] = i/angle_step ;
-      Angles.theta[z]   = theta ;
-      Angles.phi[z]     = 0 ;
-    }
-
-
-
-}
-__global__ void all_rotation(Angle Angles,int n,int angle_step,int phi_step_for_this_theta,int theta)
-{
-    
-    int z_twist=threadIdx.x;
-    int phi = threadIdx.y;
-      if (phi%phi_step_for_this_theta==0)
-      {
-        if(z_twist%angle_step==0)
-        {
-          int k=((phi/phi_step_for_this_theta)*((359/angle_step)+1))+(z_twist/angle_step)+1;
-          Angles.z_twist[n+k] = z_twist/angle_step ;
-          Angles.theta[n+k]   = theta ;
-          Angles.phi[n+k]     = phi/phi_step_for_this_theta ;
-
-        }
-      }
-
-
-}
-
-
-Angle generate_global_angles( int angle_step ) {
+struct Angle generate_global_angles( int angle_step ) {
 
 /************/
 
@@ -77,7 +36,7 @@ Angle generate_global_angles( int angle_step ) {
   int		phi_step_for_this_theta ;
 
   /* What the data is going into */
-  Angle Angles,AnglesonGPU;
+  struct Angle		Angles ;
 
 /************/
 
@@ -87,10 +46,6 @@ Angle generate_global_angles( int angle_step ) {
   } else {
     GENERAL_MEMORY_PROBLEM
   }
-  
-  cudaMalloc((void**)&AnglesonGPU.z_twist,MAX_ROTATIONS * sizeof( int ));
-  cudaMalloc((void**)&AnglesonGPU.theta,MAX_ROTATIONS * sizeof( int ));
-  cudaMalloc((void**)&AnglesonGPU.phi,MAX_ROTATIONS * sizeof( int ));
 
   n = 0 ;
 
@@ -114,27 +69,49 @@ Angle generate_global_angles( int angle_step ) {
   }
 
 /************/
-//Parallelized
-z_rotation<<<1,360>>(AnglesonGPU,n,angle_step,0);
-cudaDeviceSynchronize();
-n+=(359/angle_step)+1;
- 
 
-//Parallelized
+  for( z_twist = 0 ; z_twist < 360 ; z_twist += angle_step ) {
+
+    n ++ ;
+
+    Angles.z_twist[n] = z_twist ;
+    Angles.theta[n]   = 0 ;
+    Angles.phi[n]     = 0 ;
+
+  }
+
   for( theta = angle_step ; theta < 180 ; theta += angle_step ) {
 
     phi_step_for_this_theta = 57.29578 * acos( ( cos( 0.017453293 * angle_step ) - ( cos( 0.017453293 * theta ) * cos( 0.017453293 * theta ) ) ) / ( sin( 0.017453293 * theta ) * sin( 0.017453293 * theta ) ) ) ;
 
     while( ( 360 % phi_step_for_this_theta ) != 0 ) phi_step_for_this_theta -- ;
-    dim3 threadsperblock(360,360)
-    all_rotation<<<1,threadsperblock>>>(Angles, n, angle_step, phi_step_for_this_theta, theta);
-    cudaDeviceSynchronize();
-    n+=(((359/phi_step_for_this_theta)+1)*((359/angle_step)+1)) ;
 
-}
-z_rotation<<<1,360>>(AnglesonGPU,n,angle_step,180);
-cudaDeviceSynchronize();
-n+=(359/angle_step)+1;
+    for( phi = 0 ; phi < 360 ; phi += phi_step_for_this_theta ) {
+
+      for( z_twist = 0 ; z_twist < 360 ; z_twist += angle_step ) {
+
+        n ++ ;
+
+        Angles.z_twist[n] = z_twist ;
+        Angles.theta[n]   = theta ;
+        Angles.phi[n]     = phi ;
+
+      }
+
+    }
+
+  }
+
+  for( z_twist = 0 ; z_twist < 360 ; z_twist += angle_step ) {
+
+    n ++ ;
+
+    Angles.z_twist[n] = z_twist ;
+    Angles.theta[n]   = 180 ;
+    Angles.phi[n]     = 0 ;
+
+  }
+
 /************/
 
   if( n >= MAX_ROTATIONS ) {
@@ -143,10 +120,6 @@ n+=(359/angle_step)+1;
     exit( EXIT_FAILURE ) ;
 
   }
-  int x=MAX_ROTATIONS*sizeof(int);
-  cudaMemcpy(Angles.z_twist, AnglesonGPU.z_twist,x,cudaMemcpyDeviceToHost);
-  cudaMemcpy(Angles.theta AnglesonGPU.theta,x,cudaMemcpyDeviceToHost);
-  cudaMemcpy(Angles.phi, AnglesonGPU.phi,x,cudaMemcpyDeviceToHost);
 
   if( ( Angles.z_twist = ( int * ) realloc ( Angles.z_twist  , ( 1 + n ) * sizeof( int ) ) ) &&
       ( Angles.theta   = ( int * ) realloc ( Angles.theta    , ( 1 + n ) * sizeof( int ) ) ) &&
