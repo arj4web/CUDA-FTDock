@@ -670,10 +670,10 @@ int main( int argc , char *argv[] ) {
     cudaMalloc((void**)&d_Scores,( keep_per_rotation + 2 ) * sizeof( struct Score ));
     init_score<<<1,keep_per_rotation>>>(d_Scores);
     cudaDeviceSynchronize();
-    get_score<<<1,threadsperblock>>>(d_Scores,convoluted_grid.electrostatics);
+    get_score<<<1,threadsperblock>>>(d_Scores,convoluted_grid,convoluted_elec_grid,electrostatics,keep_per_rotation);
     cudaDeviceSynchronize();
     cudaMemcpy(Scores,d_Scores,( keep_per_rotation + 2 ) * sizeof( struct Score ),cudaMemcpyDeviceToHost);
-
+    cudaFree(d_Scores);
     
     if( rotation == 1 ) {
       if( ( ftdock_file = fopen( "scratch_scores.dat" , "w" ) ) == NULL ) {
@@ -691,7 +691,7 @@ int main( int argc , char *argv[] ) {
 
       max_es_value = min( max_es_value , d_Scores[i].rpscore ) ;
       fprintf( ftdock_file, "G_DATA %6d   %6d    %7d       %.0f      %4d %4d %4d      %4d%4d%4d\n" ,
-                rotation , 0 , d_Scores[i].score , (double)d_Scores[i].rpscore , d_Scores[i].coord[1] , d_Scores[i].coord[2] , d_Scores[i].coord[3 ] ,
+                rotation , 0 , Scores[i].score , (double)Scores[i].rpscore , Scores[i].coord[1] , Scores[i].coord[2] , Scores[i].coord[3] ,
                  Angles.z_twist[rotation] , Angles.theta[rotation]  , Angles.phi[rotation] ) ;
 
     }
