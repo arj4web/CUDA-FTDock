@@ -31,6 +31,7 @@ __global__ void assign_charges_on_GPU(struct Amino_Acid *Residue)
 {
   int residue=threadIdx.y;
   int atom=threadIdx.x;
+  int len= blockDim.y;
 
 
   if((residue>0)&&(atom>0)&&(atom<Residue[residue].size)){
@@ -48,16 +49,16 @@ __global__ void assign_charges_on_GPU(struct Amino_Acid *Residue)
       }
 
 
-    if( strcmp( This_Structure.Residue[residue].Atom[atom].atom_name , " O  " ) == 0 ) {
-        This_Structure.Residue[residue].Atom[atom].charge = -0.55 ;
-        if( residue == This_Structure.length  ) This_Structure.Residue[residue].Atom[atom].charge = -1.00 ;
+    if( strcmp( Residue[residue].Atom[atom].atom_name , " O  " ) == 0 ) {
+        Residue[residue].Atom[atom].charge = -0.55 ;
+        if( residue == len  )Residue[residue].Atom[atom].charge = -1.00 ;
       }
      /* charged residues */
 
-      if( ( strcmp( This_Structure.Residue[residue].res_name , "ARG" ) == 0 ) && ( strncmp( This_Structure.Residue[residue].Atom[atom].atom_name , " NH" , 3 ) == 0 ) ) This_Structure.Residue[residue].Atom[atom].charge =  0.50 ;
-      if( ( strcmp( This_Structure.Residue[residue].res_name , "ASP" ) == 0 ) && ( strncmp( This_Structure.Residue[residue].Atom[atom].atom_name , " OD" , 3 ) == 0 ) ) This_Structure.Residue[residue].Atom[atom].charge = -0.50 ;
-      if( ( strcmp( This_Structure.Residue[residue].res_name , "GLU" ) == 0 ) && ( strncmp( This_Structure.Residue[residue].Atom[atom].atom_name , " OE" , 3 ) == 0 ) ) This_Structure.Residue[residue].Atom[atom].charge = -0.50 ;
-      if( ( strcmp( This_Structure.Residue[residue].res_name , "LYS" ) == 0 ) && ( strcmp( This_Structure.Residue[residue].Atom[atom].atom_name , " NZ " ) == 0 ) ) This_Structure.Residue[residue].Atom[atom].charge =  1.00 ;
+      if( ( strcmp( Residue[residue].res_name , "ARG" ) == 0 ) && ( strncmp(Residue[residue].Atom[atom].atom_name , " NH" , 3 ) == 0 ) ) Residue[residue].Atom[atom].charge =  0.50 ;
+      if( ( strcmp( Residue[residue].res_name , "ASP" ) == 0 ) && ( strncmp(Residue[residue].Atom[atom].atom_name , " OD" , 3 ) == 0 ) ) Residue[residue].Atom[atom].charge = -0.50 ;
+      if( ( strcmp( Residue[residue].res_name , "GLU" ) == 0 ) && ( strncmp(Residue[residue].Atom[atom].atom_name , " OE" , 3 ) == 0 ) ) Residue[residue].Atom[atom].charge = -0.50 ;
+      if( ( strcmp( Residue[residue].res_name , "LYS" ) == 0 ) && ( strcmp( Residue[residue].Atom[atom].atom_name , " NZ " ) == 0 ) )Residue[residue].Atom[atom].charge =  1.00 ;
 
   }
 }
@@ -71,7 +72,8 @@ void assign_charges( struct Structure This_Structure ) {
   int	residue , atom,a=0 ;
 
 /************/
-struct Amino_Acid Residue[This_Structure.length],*d_Residue;
+struct Amino_Acid *Residue,*d_Residue;
+Residue = (struct Amino_Acid*)malloc(This_Structure.length*sizeof(Amino_Acid));
 for (int i = 0; i < This_Structure.length; i++)
 {
   Residue[i]=This_Structure.Residue[i];
@@ -98,12 +100,12 @@ free(Residue);
 /************************/
 __global__ void zero_interaction_grid(cufftReal *grid,int grid_size)
 {
-    x=threadIdx.x;
-    y=threadIdx.y;
-    z=threadIdx.z;
+    int x=threadIdx.x;
+    int y=threadIdx.y;
+    int z=threadIdx.z;
     grid[gaddress(x,y,z,grid_size)] = (cufftReal)0;
 }
-__global__ void field_calculation(float *phi,Amino_Acid *Residue)
+__global__ void field_calculation(float *phi,Amino_Acid *Residue,float x_centre,float y_centre,float z_centre)
 {
    int residue=threadIdx.y;
    int atom=threadIdx.x;
@@ -148,19 +150,19 @@ __global__ void field_calculation(float *phi,Amino_Acid *Residue)
 }
 __global__ void electric_fieldonGPU(cufftReal *grid,int grid_size,float grid_span,float *phi,dim3 threadPerBlock, Amino_Acid *Residue)
 {
-    x=threadIdx.x;
-    y=threadIdx.y;
-    z=threadIdx.z;
+    int x=threadIdx.x;
+    int y=threadIdx.y;
+    int z=threadIdx.z;
     if (y==0&&z==0)
     {
       printf( "." );
     }
     
-    x_centre  = gcentre( x , grid_span , grid_size ) ;
-    y_centre  = gcentre( y , grid_span , grid_size ) ;
-    z_centre  = gcentre( z , grid_span , grid_size ) ;
+    float x_centre  = gcentre( x , grid_span , grid_size ) ;
+    float y_centre  = gcentre( y , grid_span , grid_size ) ;
+    float z_centre  = gcentre( z , grid_span , grid_size ) ;
     *phi=0;
-    field_calculation<<<1,threadPerBlock>>>(phi,Residue);
+    field_calculation<<<1,threadPerBlock>>>(phi,Residue,x_centre,y_centre,z_centre);
     cudaDeviceSynchronize();
     grid[gaddress(x,y,z,grid_size)] = (cufftReal)*phi ;
 }
@@ -174,7 +176,7 @@ void electric_field( struct Structure This_Structure , float grid_span , int gri
 
   /* Counters */
 
-  int	residue , atom ;
+
 
   /* Co-ordinates */
 
@@ -195,7 +197,8 @@ cudaMalloc((void**)&phi,sizeof(float));
 
 zero_interaction_grid<<<1,threadsperblock>>>(grid,grid_size);
 cudaDeviceSynchronize();
-struct Amino_Acid Residue[This_Structure.length],*d_Residue;
+struct Amino_Acid *Residue,*d_Residue;
+Residue = (struct Amino_Acid*)malloc(This_Structure.length*sizeof(Amino_Acid));
 int a=0;
 for (int i = 0; i < This_Structure.length; i++)
 {
@@ -217,7 +220,7 @@ cudaMemcpy(d_Residue,Residue,This_Structure.length*sizeof(struct Amino_Acid),cud
 
   printf( "  electric field calculations ( one dot / grid sheet ) " ) ;
 
-  electric_fieldonGPU<<<1,threadPerBlock>>>(grid,grid_size,grid_span,phi,threadPerBlock1,d_Residue);
+  electric_fieldonGPU<<<1,threadsperblock>>>(grid,grid_size,grid_span,phi,threadPerBlock1,d_Residue);
   cudaDeviceSynchronize();
 
   printf( "\n" ) ;

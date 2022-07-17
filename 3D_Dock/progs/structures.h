@@ -151,7 +151,7 @@ extern void surface_grid( float grid_span , int grid_size , cufftReal *grid , fl
 extern void assign_charges( struct Structure This_Structure ) ;
 extern void electric_field( struct Structure This_Structure , float grid_span , int grid_size , cufftReal *grid ) ;
 extern void electric_point_charge( struct Structure This_Structure , float grid_span , int grid_size , cufftReal *grid ) ;
-extern void electric_field_zero_core( int grid_size , cufftReal *elec_grid , cufftReal *surface_grid , float internal_value ) ;
+extern __global__ void electric_field_zero_core( int grid_size , cufftReal *elec_grid , cufftReal *surface_grid , float internal_value ) ;
 
 extern void qsort_scores( struct Score *Scores , int left , int right ) ;
 extern void qsort_rpscores( struct Score *Scores , int left , int right ) ;
