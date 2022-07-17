@@ -260,16 +260,10 @@ void electric_point_charge( struct Structure This_Structure , float grid_span , 
   float		one_span ;
 
 /************/
+dim3 threadsperblock(grid_size,grid_size,grid_size);
+zero_interaction_grid<<<1,threadsperblock>>>(grid,grid_size);
+cudaDeviceSynchronize();
 
-  for( x = 0 ; x < grid_size ; x ++ ) {
-    for( y = 0 ; y < grid_size ; y ++ ) {
-      for( z = 0 ; z < grid_size ; z ++ ) {
-
-        grid[gaddress(x,y,z,grid_size)] = (cufftReal)0 ;
-
-      }
-    }
-  }
 
 /************/
 
