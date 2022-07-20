@@ -26,7 +26,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
-#include "structures.h"
+#include "structures.cuh"
 
 __global__ void z_rotation(Angle Angles,int n,int angle_step,int theta)
 {

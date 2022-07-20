@@ -22,9 +22,9 @@ FFTW_DIR        = /computer/home/me/fftw-2.1.3
 
 SHELL           = /bin/sh
 
-CC              = cc
+CC              = nvcc
 
-CC_FLAGS        = -ansi -O6 -fomit-frame-pointer -Wall -W -Wcast-qual -Wpointer-arith -Wcast-align -pedantic -fno-schedule-insns -fschedule-insns2 -malign-double -fstrict-aliasing -mcpu=pentiumpro
+CC_FLAGS        = -O6 -fomit-frame-pointer -Wall -W -Wcast-qual -Wpointer-arith -Wcast-align -pedantic -fno-schedule-insns -fschedule-insns2 -malign-double -fstrict-aliasing
 
 CC_LINKERS      = -lm
 

@@ -46,7 +46,7 @@ __global__ void interaction_grid(cufftReal *grid, Amino_Acid *Residue,float grid
 
   /* Variables */
 
-     float         distance , one_span ;
+     float         distance,one_span;
      one_span = grid_span / (float)grid_size ;
 
      distance = 1.8 ;
@@ -91,14 +91,13 @@ void discretise_structure( struct Structure This_Structure , float grid_span , i
 
   /* Counters */
 
-  int	residue , atom ;
+ 
 
   /* Co-ordinates */
 
-  int	x , y , z ;
-  int	steps , x_step , y_step , z_step ;
 
-  float		x_centre , y_centre , z_centre ;
+  int	steps;
+
 
   /* Variables */
 
