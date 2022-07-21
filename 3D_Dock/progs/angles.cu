@@ -73,7 +73,7 @@ Angle generate_global_angles( int angle_step ) {
 
   /* Variables */
 
-  int		z_twist=0 , theta , phi ;
+  int		theta;
   int		phi_step_for_this_theta ;
 
   /* What the data is going into */
@@ -95,7 +95,7 @@ Angle generate_global_angles( int angle_step ) {
   n = 0 ;
 
   theta = 0 ;
-  phi = 0 ;
+ 
 
 /************/
 

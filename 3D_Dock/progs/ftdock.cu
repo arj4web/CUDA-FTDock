@@ -530,7 +530,7 @@ int main( int argc , char *argv[] ) {
     ||
     (cudaMalloc((void**)&mobile_elec_grid,size1* sizeof( cufftReal )) == cudaErrorMemoryAllocation)
     ||
-    (cudaMalloc((void**)&convoluted__elec_grid,size1* sizeof( cufftReal ))== cudaErrorMemoryAllocation)
+    (cudaMalloc((void**)&convoluted_elec_grid,size1* sizeof( cufftReal ))== cudaErrorMemoryAllocation)
     ) {
     printf( "Not enough memory for surface grids\nUse (sensible) smaller grid size\nDying\n\n" ) ;
     exit( EXIT_FAILURE ) ;
