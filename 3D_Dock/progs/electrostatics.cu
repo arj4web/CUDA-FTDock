@@ -26,7 +26,59 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
-#include "structures.h"
+
+#include "structures.cuh"
+__device__ int my_strcmp(const char *str_a, const char *str_b, unsigned len = 256){
+  int match = 0;
+  unsigned i = 0;
+  unsigned done = 0;
+  while ((i < len) && (match == 0) && !done){
+    if ((str_a[i] == 0) || (str_b[i] == 0)) done = 1;
+    else if (str_a[i] != str_b[i]){
+      match = i+1;
+      if ((int)str_a[i] - (int)str_b[i] < 0) match = 0 - (i + 1);}
+    i++;}
+  return match;
+  }
+
+  __device__ int my_strncmp(const char *s1, const char *s2, size_t n)
+  {
+      unsigned char c1 = '\0';
+  unsigned char c2 = '\0';
+  if (n >= 4)
+    {
+      size_t n4 = n >> 2;
+      do
+        {
+          c1 = (unsigned char) *s1++;
+          c2 = (unsigned char) *s2++;
+          if (c1 == '\0' || c1 != c2)
+            return c1 - c2;
+          c1 = (unsigned char) *s1++;
+          c2 = (unsigned char) *s2++;
+          if (c1 == '\0' || c1 != c2)
+            return c1 - c2;
+          c1 = (unsigned char) *s1++;
+          c2 = (unsigned char) *s2++;
+          if (c1 == '\0' || c1 != c2)
+            return c1 - c2;
+          c1 = (unsigned char) *s1++;
+          c2 = (unsigned char) *s2++;
+          if (c1 == '\0' || c1 != c2)
+            return c1 - c2;
+        } while (--n4 > 0);
+      n &= 3;
+    }
+  while (n > 0)
+    {
+      c1 = (unsigned char) *s1++;
+      c2 = (unsigned char) *s2++;
+      if (c1 == '\0' || c1 != c2)
+        return c1 - c2;
+      n--;
+    }
+  return c1 - c2;
+  }
 __global__ void assign_charges_on_GPU(struct Amino_Acid *Residue)
 {
   int residue=threadIdx.y;
@@ -39,8 +91,8 @@ __global__ void assign_charges_on_GPU(struct Amino_Acid *Residue)
     Residue[residue].Atom[atom].charge = 0.0;
     /* peptide backbone */
 
-    if( strcmp(Residue[residue].Atom[atom].atom_name , " N  " ) == 0 ) {
-        if( strcmp(Residue[residue].res_name , "PRO" ) == 0 ) {
+    if( my_strcmp(Residue[residue].Atom[atom].atom_name , " N  " ) == 0 ) {
+        if( my_strcmp(Residue[residue].res_name , "PRO" ) == 0 ) {
           Residue[residue].Atom[atom].charge = -0.10 ;
         } else {
           Residue[residue].Atom[atom].charge =  0.55 ;
@@ -49,16 +101,16 @@ __global__ void assign_charges_on_GPU(struct Amino_Acid *Residue)
       }
 
 
-    if( strcmp( Residue[residue].Atom[atom].atom_name , " O  " ) == 0 ) {
+    if( my_strcmp( Residue[residue].Atom[atom].atom_name , " O  " ) == 0 ) {
         Residue[residue].Atom[atom].charge = -0.55 ;
         if( residue == len  )Residue[residue].Atom[atom].charge = -1.00 ;
       }
      /* charged residues */
 
-      if( ( strcmp( Residue[residue].res_name , "ARG" ) == 0 ) && ( strncmp(Residue[residue].Atom[atom].atom_name , " NH" , 3 ) == 0 ) ) Residue[residue].Atom[atom].charge =  0.50 ;
-      if( ( strcmp( Residue[residue].res_name , "ASP" ) == 0 ) && ( strncmp(Residue[residue].Atom[atom].atom_name , " OD" , 3 ) == 0 ) ) Residue[residue].Atom[atom].charge = -0.50 ;
-      if( ( strcmp( Residue[residue].res_name , "GLU" ) == 0 ) && ( strncmp(Residue[residue].Atom[atom].atom_name , " OE" , 3 ) == 0 ) ) Residue[residue].Atom[atom].charge = -0.50 ;
-      if( ( strcmp( Residue[residue].res_name , "LYS" ) == 0 ) && ( strcmp( Residue[residue].Atom[atom].atom_name , " NZ " ) == 0 ) )Residue[residue].Atom[atom].charge =  1.00 ;
+      if( ( my_strcmp( Residue[residue].res_name , "ARG" ) == 0 ) && ( my_strncmp(Residue[residue].Atom[atom].atom_name , " NH" , 3 ) == 0 ) ) Residue[residue].Atom[atom].charge =  0.50 ;
+      if( ( my_strcmp( Residue[residue].res_name , "ASP" ) == 0 ) && ( my_strncmp(Residue[residue].Atom[atom].atom_name , " OD" , 3 ) == 0 ) ) Residue[residue].Atom[atom].charge = -0.50 ;
+      if( ( my_strcmp( Residue[residue].res_name , "GLU" ) == 0 ) && ( my_strncmp(Residue[residue].Atom[atom].atom_name , " OE" , 3 ) == 0 ) ) Residue[residue].Atom[atom].charge = -0.50 ;
+      if( ( my_strcmp( Residue[residue].res_name , "LYS" ) == 0 ) && ( my_strcmp( Residue[residue].Atom[atom].atom_name , " NZ " ) == 0 ) )Residue[residue].Atom[atom].charge =  1.00 ;
 
   }
 }

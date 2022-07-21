@@ -12,43 +12,49 @@
 
 # This line you will definitely have to edit
 
-FFTW_DIR        = /computer/home/me/fftw-2.1.3
+CUDA_PATH := /usr/local/cuda
 
 #############
 
 # You may need/want to edit some of these
 #
-# Hint: For the CC_FLAGS have a look at what the fftw build used
+# Hint: For the NVCC_FLAGS have a look at what the fftw build used
 
 SHELL           = /bin/sh
 
-CC              = cc
+NVCC              = nvcc
 
-CC_FLAGS        = -ansi -O6 -fomit-frame-pointer -Wall -W -Wcast-qual -Wpointer-arith -Wcast-align -pedantic -fno-schedule-insns -fschedule-insns2 -malign-double -fstrict-aliasing -mcpu=pentiumpro
+NVCC_FLAGS        = -arch=compute_75 -rdc=true -m64
 
-CC_LINKERS      = -lm
+NVCC_LINKERS      = -lm
 
 STRIP           = strip
 
-SECURITY	= chmod 555
+SECURITY	= chmod +x
+
+LIBS = -lcufft -lcuda -lcudart -lcurand
+
+LIBPATH := $(CUDA_PATH)/lib64
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda/lib64
+SOLIBS := $(LIBPATH)/libcufft.so $(LIBPATH)/libcudart.so $(LIBPATH)/libcurand.so 
 
 ####################################################
 
 # You should not be editing anything below here
 
-CC_FLAGS_FULL	= -I$(FFTW_DIR)/fftw -I$(FFTW_DIR)/rfftw $(CC_FLAGS)
-FFTW_LINKERS    = -L$(FFTW_DIR)/fftw/.libs -L$(FFTW_DIR)/rfftw/.libs -lrfftw -lfftw
+NVCC_FLAGS_FULL	= $(NVCC_FLAGS)
+FFTW_LINKERS    = -L$(FFTW_DIR)
 
 #############
 
-.SUFFIXES:	.c .o
+.SUFFIXES:	.cu .o
 
-.c.o:
-		$(CC) $(CC_FLAGS_FULL) -c $<
+.cu.o:
+		$(NVCC) $(NVCC_FLAGS_FULL) -c $<
 
 #############
 
-LIBRARY_OBJECTS = manipulate_structures.o angles.o coordinates.o electrostatics.o grid.o qsort_scores.o
+LIBRARY_OBJECTS =manipulate_structures.o angles.o coordinates.o electrostatics.o grid.o qsort_scores.o
 
 PROGRAMS = ftdock build randomspin
 
@@ -56,24 +62,20 @@ all:		$(PROGRAMS)
 
 #############
 
-ftdock:		ftdock.o $(LIBRARY_OBJECTS) structures.h
-		$(CC) $(CC_FLAGS_FULL) -o $@ ftdock.o $(LIBRARY_OBJECTS) $(FFTW_LINKERS) $(CC_LINKERS)
+ftdock:	ftdock.o $(LIBRARY_OBJECTS) structures.cuh
+		$(NVCC) $(NVCC_FLAGS_FULL) ftdock.o $(LIBRARY_OBJECTS) $(LIBS) -o $@ 
 		$(STRIP) $@
 		$(SECURITY) $@
+		
+#############
+
+build:		build.o $(LIBRARY_OBJECTS) structures.cuh
+		$(NVCC) $(NVCC_FLAGS) $(LIBRARY_OBJECTS) $(LIBS) -o $@ build.o 
 
 #############
 
-build:		build.o $(LIBRARY_OBJECTS) structures.h
-		$(CC) $(CC_FLAGS) -o $@ build.o $(LIBRARY_OBJECTS) $(CC_LINKERS)
-		$(STRIP) $@
-		$(SECURITY) $@
-
-#############
-
-randomspin:	randomspin.o $(LIBRARY_OBJECTS) structures.h
-		$(CC) $(CC_FLAGS) -o $@ randomspin.o $(LIBRARY_OBJECTS) $(CC_LINKERS)
-		$(STRIP) $@
-		$(SECURITY) $@
+randomspin:	randomspin.o $(LIBRARY_OBJECTS) structures.cuh
+		$(NVCC) $(NVCC_FLAGS) $(LIBRARY_OBJECTS) $(LIBS) -o $@ randomspin.o
 
 #############
 
@@ -84,13 +86,13 @@ clean:
 
 # dependencies
 
-ftdock.o:			structures.h
-build.o:			structures.h
-randomspin.o:			structures.h
+ftdock.o:			structures.cuh
+build.o:			structures.cuh
+randomspin.o:			structures.cuh
 
-angles.o:			structures.h
-coordinates.o:			structures.h
-electrostatics.o:		structures.h
-grid.o:				structures.h
-manipulate_structures.o:	structures.h
-qsort_scores.o:			structures.h
+angles.o:			structures.cuh
+coordinates.o:			structures.cuh
+electrostatics.o:		structures.cuh
+grid.o:				structures.cuh
+manipulate_structures.o:	structures.cuh
+qsort_scores.o:			structures.cuh

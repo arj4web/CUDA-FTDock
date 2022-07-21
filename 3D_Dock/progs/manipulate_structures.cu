@@ -26,7 +26,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
-#include "structures.h"
+#include "structures.cuh"
 
 struct Structure read_pdb_to_structure( char *pdb_file_name ) {
 

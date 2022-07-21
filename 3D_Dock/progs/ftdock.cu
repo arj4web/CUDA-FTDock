@@ -26,10 +26,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
-#include "structures.h"
+#include "structures.cuh"
 #include <cuda_runtime.h>
-#include <cufftXt.h>
-#include <cufft.h>
+
 
 __global__ void convolution(cufftComplex *static_fsg,cufftComplex *multiple_fsg,cufftComplex *mobile_fsg,cufftComplex *static_elec_fsg,cufftComplex *mobile_elec_fsg,cufftComplex *multiple_elec_fsg,int electrostatics)
 {
@@ -531,7 +530,7 @@ int main( int argc , char *argv[] ) {
     ||
     (cudaMalloc((void**)&mobile_elec_grid,size1* sizeof( cufftReal )) == cudaErrorMemoryAllocation)
     ||
-    (cudaMalloc((void**)&convoluted__elec_grid,size1* sizeof( cufftReal ))== cudaErrorMemoryAllocation)
+    (cudaMalloc((void**)&convoluted_elec_grid,size1* sizeof( cufftReal ))== cudaErrorMemoryAllocation)
     ) {
     printf( "Not enough memory for surface grids\nUse (sensible) smaller grid size\nDying\n\n" ) ;
     exit( EXIT_FAILURE ) ;

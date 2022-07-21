@@ -26,7 +26,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
-#include "structures.h"
+#include "structures.cuh"
 
 __global__ void z_rotation(Angle Angles,int n,int angle_step,int theta)
 {
@@ -73,7 +73,7 @@ Angle generate_global_angles( int angle_step ) {
 
   /* Variables */
 
-  int		z_twist=0 , theta , phi ;
+  int		theta;
   int		phi_step_for_this_theta ;
 
   /* What the data is going into */
@@ -95,7 +95,7 @@ Angle generate_global_angles( int angle_step ) {
   n = 0 ;
 
   theta = 0 ;
-  phi = 0 ;
+ 
 
 /************/
 

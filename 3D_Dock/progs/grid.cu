@@ -26,9 +26,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
-#include "structures.h"
+#include "structures.cuh"
 
-__global__ void zero_interaction_grid(cufftReal *grid,int grid_size)
+__global__ void zero1_interaction_grid(cufftReal *grid,int grid_size)
 {
     int x=threadIdx.x;
     int y=threadIdx.y;
@@ -46,7 +46,7 @@ __global__ void interaction_grid(cufftReal *grid, Amino_Acid *Residue,float grid
 
   /* Variables */
 
-     float         distance , one_span ;
+     float         distance,one_span;
      one_span = grid_span / (float)grid_size ;
 
      distance = 1.8 ;
@@ -91,14 +91,13 @@ void discretise_structure( struct Structure This_Structure , float grid_span , i
 
   /* Counters */
 
-  int	residue , atom ;
+ 
 
   /* Co-ordinates */
 
-  int	x , y , z ;
-  int	steps , x_step , y_step , z_step ;
 
-  float		x_centre , y_centre , z_centre ;
+  int	steps;
+
 
   /* Variables */
 
@@ -114,7 +113,7 @@ void discretise_structure( struct Structure This_Structure , float grid_span , i
 dim3 threadsperblock(grid_size,grid_size,grid_size);
 
 
-zero_interaction_grid<<<1,threadsperblock>>>(grid,grid_size);
+zero1_interaction_grid<<<1,threadsperblock>>>(grid,grid_size);
 cudaDeviceSynchronize();
 
 
