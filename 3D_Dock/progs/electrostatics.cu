@@ -250,20 +250,19 @@ cudaMalloc((void**)&phi,sizeof(float));
 zero_interaction_grid<<<1,threadsperblock>>>(grid,grid_size);
 cudaDeviceSynchronize();
 struct Amino_Acid *Residue,*d_Residue;
-Residue = (struct Amino_Acid*)malloc(This_Structure.length*sizeof(Amino_Acid));
-int a=0;
-for (int i = 0; i < This_Structure.length; i++)
+Residue = (struct Amino_Acid*)malloc((This_Structure.length+1)*sizeof(Amino_Acid));
+for (int i = 1; i <= This_Structure.length; i++)
 {
   Residue[i]=This_Structure.Residue[i];
-  cudaMalloc(&Residue[i].Atom,This_Structure.Residue[i].size*sizeof(struct Atom));
-  cudaMemcpy(Residue[i].Atom,This_Structure.Residue[i].Atom,This_Structure.Residue[i].size*sizeof(struct Atom),cudaMemcpyHostToDevice);
+  cudaMalloc((void**)&Residue[i].Atom,(This_Structure.Residue[i].size+1)*sizeof(struct Atom));
+  cudaMemcpy(Residue[i].Atom,This_Structure.Residue[i].Atom,(This_Structure.Residue[i].size+1)*sizeof(struct Atom),cudaMemcpyHostToDevice);
   a=max(a,This_Structure.Residue[i].size);
   
 }
 cudaMalloc((void**)&d_Residue,This_Structure.length*sizeof(struct Amino_Acid));
 cudaMemcpy(d_Residue,Residue,This_Structure.length*sizeof(struct Amino_Acid),cudaMemcpyHostToDevice);
-
-  dim3 threadPerBlock1(a,This_Structure.length);
+  
+dim3 threadPerBlock1(a+1,This_Structure.length+1);
 
 
 /************/
@@ -291,8 +290,29 @@ cudaMemcpy(d_Residue,Residue,This_Structure.length*sizeof(struct Amino_Acid),cud
 
 /************************/
 
+__global__ void point_charge_GPU()
+{
+    int residue=threadIdx.y;
+    int atom=threadIdx.x;
+    if((residue>0)&&(atom>0)&&(atom<=Residue[residue].size))
+    {
+        if( This_Structure.Residue[residue].Atom[atom].charge != 0 ) {
 
+        x_low = gord( Residue[residue].Atom[atom].coord[1] - ( one_span / 2 ) , grid_span , grid_size ) ;
+        y_low = gord( Residue[residue].Atom[atom].coord[2] - ( one_span / 2 ) , grid_span , grid_size ) ;
+        z_low = gord( Residue[residue].Atom[atom].coord[3] - ( one_span / 2 ) , grid_span , grid_size ) ;
 
+        x_high = x_low + 1 ;
+        y_high = y_low + 1 ;
+        z_high = z_low + 1 ;
+
+        a = This_Structure.Residue[residue].Atom[atom].coord[1] - gcentre( x_low , grid_span , grid_size ) - ( one_span / 2 ) ;
+        b = This_Structure.Residue[residue].Atom[atom].coord[2] - gcentre( y_low , grid_span , grid_size ) - ( one_span / 2 ) ;
+        c = This_Structure.Residue[residue].Atom[atom].coord[3] - gcentre( z_low , grid_span , grid_size ) - ( one_span / 2 ) ;
+ 
+    }
+}
+}
 void electric_point_charge( struct Structure This_Structure , float grid_span , int grid_size , cufftReal *grid ) {
 
 /************/
@@ -321,7 +341,19 @@ cudaDeviceSynchronize();
 
 
 /************/
-
+struct Amino_Acid *Residue,*d_Residue;
+Residue = (struct Amino_Acid*)malloc((This_Structure.length+1)*sizeof(Amino_Acid));
+for (int i = 1; i <= This_Structure.length; i++)
+{
+  Residue[i]=This_Structure.Residue[i];
+  cudaMalloc((void**)&Residue[i].Atom,(This_Structure.Residue[i].size+1)*sizeof(struct Atom));
+  cudaMemcpy(Residue[i].Atom,This_Structure.Residue[i].Atom,(This_Structure.Residue[i].size+1)*sizeof(struct Atom),cudaMemcpyHostToDevice);
+  a=max(a,This_Structure.Residue[i].size);
+  
+}
+cudaMalloc((void**)&d_Residue,This_Structure.length*sizeof(struct Amino_Acid));
+cudaMemcpy(d_Residue,Residue,This_Structure.length*sizeof(struct Amino_Acid),cudaMemcpyHostToDevice);
+dim3 threadPerBlock1(a+1,This_Structure.length+1);
   one_span = grid_span / (float)grid_size ;
 
   for( residue = 1 ; residue <= This_Structure.length ; residue ++ ) {
