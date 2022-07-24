@@ -139,7 +139,7 @@ cudaMemcpy(d_Residue,Residue,This_Structure.length*sizeof(struct Amino_Acid),cud
 
 dim3 threadPerBlock(a+1,This_Structure.length+1);
 assign_charges_on_GPU<<<1,threadPerBlock>>>(d_Residue);
-cudaDeviceSynchronize;
+cudaDeviceSynchronize();
 cudaMemcpy(This_Structure.Residue,d_Residue,(This_Structure.length+1)*sizeof(struct Amino_Acid),cudaMemcpyDeviceToHost);
 cudaFree(d_Residue);
 free(Residue);
@@ -354,9 +354,9 @@ cudaDeviceSynchronize();
               z_corner = one_span * ( (float)( z - z_high ) + .5 ) ;
 
               w = ( ( x_corner + a ) * ( y_corner + b ) * ( z_corner + c ) ) / ( 8.0 * x_corner * y_corner * z_corner ) ;
-
+              printf("\nHere2\n");
               grid[gaddress(x,y,z,grid_size)] += (cufftReal)( w * This_Structure.Residue[residue].Atom[atom].charge ) ;
-
+              printf("\nHere1\n");
             }
           }
         }

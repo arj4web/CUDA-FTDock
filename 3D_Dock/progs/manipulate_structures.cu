@@ -422,7 +422,7 @@ __global__ void RotateonGPU(Amino_Acid *Residue,int z_twist , int theta , int ph
   float			post_z_twist_x , post_z_twist_y , post_z_twist_z ;
   float			post_theta_x , post_theta_y , post_theta_z ;
 
-  if((residue>0)&&(atom>0)&&(atom<Residue[residue].size)){
+  if((residue>0)&&(atom>0)&&(atom<=Residue[residue].size)){
       /* Perform Z axis twist */
       post_z_twist_x = Residue[residue].Atom[atom].coord[1] * cos( 0.017453293 * z_twist ) - Residue[residue].Atom[atom].coord[2] * sin( 0.017453293 * z_twist ) ;
       post_z_twist_y = Residue[residue].Atom[atom].coord[1] * sin( 0.017453293 * z_twist ) + Residue[residue].Atom[atom].coord[2] * cos( 0.017453293 * z_twist ) ;
@@ -461,24 +461,27 @@ struct Structure rotate_structure( struct Structure This_Structure , int z_twist
 /************/
 
   New_Structure = duplicate_structure( This_Structure ) ;
-  struct Amino_Acid Residue[This_Structure.length],*d_Residue;
-  for (int i = 0; i < This_Structure.length; i++)
+  struct Amino_Acid *Residue,*d_Residue;
+  Residue = (struct Amino_Acid*)malloc((This_Structure.length+1)*sizeof(Amino_Acid));
+  for (int i = 1; i <=This_Structure.length; i++)
   {
+    
     Residue[i]=This_Structure.Residue[i];
-    cudaMalloc(&Residue[i].Atom,This_Structure.Residue[i].size*sizeof(struct Atom));
-    cudaMemcpy(Residue[i].Atom,This_Structure.Residue[i].Atom,This_Structure.Residue[i].size*sizeof(struct Atom),cudaMemcpyHostToDevice);
+    cudaMalloc((void**)&Residue[i].Atom,(This_Structure.Residue[i].size+1)*sizeof(struct Atom));
+    cudaMemcpy(Residue[i].Atom,This_Structure.Residue[i].Atom,(This_Structure.Residue[i].size+1)*sizeof(struct Atom),cudaMemcpyHostToDevice);
     a=max(a,This_Structure.Residue[i].size);
     
   }
-  cudaMalloc((void**)&d_Residue,This_Structure.length*sizeof(struct Amino_Acid));
-  cudaMemcpy(d_Residue,Residue,This_Structure.length*sizeof(struct Amino_Acid),cudaMemcpyHostToDevice);
+  cudaMalloc((void**)&d_Residue,(This_Structure.length+1)*sizeof(struct Amino_Acid));
+  cudaMemcpy(d_Residue,Residue,(This_Structure.length+1)*sizeof(struct Amino_Acid),cudaMemcpyHostToDevice);
 
-  dim3 threadPerBlock(a,This_Structure.length);
+  dim3 threadPerBlock(a+1,This_Structure.length+1);
   RotateonGPU<<<1,threadPerBlock>>>(d_Residue,z_twist,phi,theta);
+  cudaDeviceSynchronize();
 
 /************/
 
-  cudaMemcpy(New_Structure.Residue,d_Residue,This_Structure.length*sizeof(struct Amino_Acid),cudaMemcpyDeviceToHost);
+  cudaMemcpy(New_Structure.Residue,d_Residue,(This_Structure.length+1)*sizeof(struct Amino_Acid),cudaMemcpyDeviceToHost);
 
   return New_Structure ;
 

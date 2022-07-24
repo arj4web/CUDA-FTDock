@@ -457,7 +457,9 @@ int main( int argc , char *argv[] ) {
 
   if( electrostatics == 1 ) {
     printf( "Assigning charges\n" ) ;
-    assign_charges( Static_Structure ) ;
+    printf("Static charge assign\n");
+    assign_charges( Static_Structure );
+    printf("Mobile charge assign\n");
     assign_charges( Mobile_Structure ) ;
   }
 
@@ -467,7 +469,6 @@ int main( int argc , char *argv[] ) {
 
   Origin_Static_Structure = translate_structure_onto_origin( Static_Structure ) ;
   Origin_Mobile_Structure = translate_structure_onto_origin( Mobile_Structure ) ;
-
   /* Free some memory */
 
   for( i = 1 ; i <= Static_Structure.length ; i ++ ) {
@@ -566,11 +567,13 @@ int main( int argc , char *argv[] ) {
   printf( "  surfacing grid\n") ;
   dim3 threadsperblock(global_grid_size,global_grid_size,global_grid_size);
   surface_grid<<<1,threadsperblock>>>( grid_span , global_grid_size , static_grid , surface , internal_value ) ;
+  cudaDeviceSynchronize();
 
   /* Calculate electic field at all grid nodes (need do only once) */
   if( electrostatics == 1 ) {
     electric_field( Origin_Static_Structure , grid_span , global_grid_size , static_elec_grid ) ;
     electric_field_zero_core<<<1,threadsperblock>>>( global_grid_size , static_elec_grid , static_grid , internal_value ) ;
+    cudaDeviceSynchronize();
   }
 
   /* Fourier Transform the static grids (need do only once) */
@@ -627,12 +630,13 @@ int main( int argc , char *argv[] ) {
   for( rotation = first_rotation ; rotation <= Angles.n ; rotation ++ ) {
 
     printf( "." ) ; 
+    
 
     if( ( rotation % 50 ) == 0 ) printf( "\nRotation number %5d\n" , rotation ) ;
 
     /* Rotate Mobile Structure */
     Rotated_at_Origin_Mobile_Structure = rotate_structure( Origin_Mobile_Structure , (int)Angles.z_twist[rotation] , (int)Angles.theta[rotation] , (int)Angles.phi[rotation] ) ;
-
+    
     /* Discretise the rotated Mobile Structure */
     discretise_structure( Rotated_at_Origin_Mobile_Structure , grid_span , global_grid_size , mobile_grid,size1 ) ;
 
@@ -640,6 +644,7 @@ int main( int argc , char *argv[] ) {
     if( electrostatics == 1 ) {
       electric_point_charge( Rotated_at_Origin_Mobile_Structure , grid_span , global_grid_size , mobile_elec_grid ) ;
     }
+      
 
     /* Forward Fourier Transforms */
     result = cufftExecR2C( p , mobile_grid , NULL ) ;
