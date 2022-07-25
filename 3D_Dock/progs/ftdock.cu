@@ -643,6 +643,7 @@ int main( int argc , char *argv[] ) {
     /* Electic point charge approximation onto grid calculations ( quicker than filed calculations by a long way! ) */
     if( electrostatics == 1 ) {
       electric_point_charge( Rotated_at_Origin_Mobile_Structure , grid_span , global_grid_size , mobile_elec_grid ) ;
+      
     }
       
 
@@ -662,11 +663,13 @@ int main( int argc , char *argv[] ) {
    dim3 threadsperblockconvo(global_grid_size,global_grid_size,(global_grid_size/2)+1);
    convolution<<<1,threadsperblockconvo>>>(static_fsg,multiple_fsg,mobile_fsg,static_elec_fsg,mobile_elec_fsg,multiple_elec_fsg,electrostatics);
    cudaDeviceSynchronize();
+  
     /* Reverse Fourier Transform */
     result = cufftExecC2R( pinv , multiple_fsg , NULL ) ;
     if( electrostatics == 1 ) {
       result = cufftExecC2R( pinv , multiple_elec_fsg , NULL ) ;
     }
+   
 
 /************/
 
@@ -674,6 +677,7 @@ int main( int argc , char *argv[] ) {
     cudaMalloc((void**)&d_Scores,( keep_per_rotation + 2 ) * sizeof( struct Score ));
     init_score<<<1,keep_per_rotation>>>(d_Scores);
     cudaDeviceSynchronize();
+      
     get_score<<<1,threadsperblock>>>(d_Scores,convoluted_grid,convoluted_elec_grid,electrostatics,keep_per_rotation);
     cudaDeviceSynchronize();
     cudaMemcpy(Scores,d_Scores,( keep_per_rotation + 2 ) * sizeof( struct Score ),cudaMemcpyDeviceToHost);
@@ -690,10 +694,11 @@ int main( int argc , char *argv[] ) {
         exit( EXIT_FAILURE ) ;
       }
     }
+  
 
     for( i = 0 ; i < keep_per_rotation ; i ++ ) {
 
-      max_es_value = min( max_es_value , d_Scores[i].rpscore ) ;
+      max_es_value = min( max_es_value , Scores[i].rpscore ) ;
       fprintf( ftdock_file, "G_DATA %6d   %6d    %7d       %.0f      %4d %4d %4d      %4d%4d%4d\n" ,
                 rotation , 0 , Scores[i].score , (double)Scores[i].rpscore , Scores[i].coord[1] , Scores[i].coord[2] , Scores[i].coord[3] ,
                  Angles.z_twist[rotation] , Angles.theta[rotation]  , Angles.phi[rotation] ) ;
