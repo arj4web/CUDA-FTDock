@@ -86,13 +86,13 @@ __global__ void assign_charges_on_GPU(struct Amino_Acid *Residue)
   int len= blockDim.y;
 
 
-  if((residue>0)&&(atom>0)&&(atom<Residue[residue].size)){
+  if((residue>0)&&(atom>0)&&(atom<=Residue[residue].size)){
 
     Residue[residue].Atom[atom].charge = 0.0;
     /* peptide backbone */
 
-    if( my_strcmp(Residue[residue].Atom[atom].atom_name , " N  " ) == 0 ) {
-        if( my_strcmp(Residue[residue].res_name , "PRO" ) == 0 ) {
+    if( my_strcmp(Residue[residue].Atom[atom].atom_name , " N  ",3 ) == 0 ) {
+        if( my_strcmp(Residue[residue].res_name , "PRO",3 ) == 0 ) {
           Residue[residue].Atom[atom].charge = -0.10 ;
         } else {
           Residue[residue].Atom[atom].charge =  0.55 ;
@@ -101,16 +101,16 @@ __global__ void assign_charges_on_GPU(struct Amino_Acid *Residue)
       }
 
 
-    if( my_strcmp( Residue[residue].Atom[atom].atom_name , " O  " ) == 0 ) {
+    if( my_strcmp( Residue[residue].Atom[atom].atom_name , " O  ",3 ) == 0 ) {
         Residue[residue].Atom[atom].charge = -0.55 ;
-        if( residue == len  )Residue[residue].Atom[atom].charge = -1.00 ;
+        if( residue == len-1)Residue[residue].Atom[atom].charge = -1.00 ;
       }
      /* charged residues */
 
-      if( ( my_strcmp( Residue[residue].res_name , "ARG" ) == 0 ) && ( my_strncmp(Residue[residue].Atom[atom].atom_name , " NH" , 3 ) == 0 ) ) Residue[residue].Atom[atom].charge =  0.50 ;
-      if( ( my_strcmp( Residue[residue].res_name , "ASP" ) == 0 ) && ( my_strncmp(Residue[residue].Atom[atom].atom_name , " OD" , 3 ) == 0 ) ) Residue[residue].Atom[atom].charge = -0.50 ;
-      if( ( my_strcmp( Residue[residue].res_name , "GLU" ) == 0 ) && ( my_strncmp(Residue[residue].Atom[atom].atom_name , " OE" , 3 ) == 0 ) ) Residue[residue].Atom[atom].charge = -0.50 ;
-      if( ( my_strcmp( Residue[residue].res_name , "LYS" ) == 0 ) && ( my_strcmp( Residue[residue].Atom[atom].atom_name , " NZ " ) == 0 ) )Residue[residue].Atom[atom].charge =  1.00 ;
+      if( ( my_strcmp( Residue[residue].res_name , "ARG",3 ) == 0 ) && ( my_strncmp(Residue[residue].Atom[atom].atom_name , " NH" , 3 ) == 0 ) ) Residue[residue].Atom[atom].charge =  0.50 ;
+      if( ( my_strcmp( Residue[residue].res_name , "ASP",3 ) == 0 ) && ( my_strncmp(Residue[residue].Atom[atom].atom_name , " OD" , 3 ) == 0 ) ) Residue[residue].Atom[atom].charge = -0.50 ;
+      if( ( my_strcmp( Residue[residue].res_name , "GLU",3 ) == 0 ) && ( my_strncmp(Residue[residue].Atom[atom].atom_name , " OE" , 3 ) == 0 ) ) Residue[residue].Atom[atom].charge = -0.50 ;
+      if( ( my_strcmp( Residue[residue].res_name , "LYS",3 ) == 0 ) && ( my_strcmp( Residue[residue].Atom[atom].atom_name , " NZ ",3 ) == 0 ) )Residue[residue].Atom[atom].charge =  1.00 ;
 
   }
 }
@@ -125,22 +125,22 @@ void assign_charges( struct Structure This_Structure ) {
 
 /************/
 struct Amino_Acid *Residue,*d_Residue;
-Residue = (struct Amino_Acid*)malloc(This_Structure.length*sizeof(Amino_Acid));
-for (int i = 0; i < This_Structure.length; i++)
+Residue = (struct Amino_Acid*)malloc((This_Structure.length+1)*sizeof(Amino_Acid));
+for (int i = 1; i <= This_Structure.length; i++)
 {
   Residue[i]=This_Structure.Residue[i];
-  cudaMalloc(&Residue[i].Atom,This_Structure.Residue[i].size*sizeof(struct Atom));
-  cudaMemcpy(Residue[i].Atom,This_Structure.Residue[i].Atom,This_Structure.Residue[i].size*sizeof(struct Atom),cudaMemcpyHostToDevice);
+  cudaMalloc((void**)&Residue[i].Atom,(This_Structure.Residue[i].size+1)*sizeof(struct Atom));
+  cudaMemcpy(Residue[i].Atom,This_Structure.Residue[i].Atom,(This_Structure.Residue[i].size+1)*sizeof(struct Atom),cudaMemcpyHostToDevice);
   a=max(a,This_Structure.Residue[i].size);
   
 }
 cudaMalloc((void**)&d_Residue,This_Structure.length*sizeof(struct Amino_Acid));
 cudaMemcpy(d_Residue,Residue,This_Structure.length*sizeof(struct Amino_Acid),cudaMemcpyHostToDevice);
 
-dim3 threadPerBlock(a,This_Structure.length);
+dim3 threadPerBlock(a+1,This_Structure.length+1);
 assign_charges_on_GPU<<<1,threadPerBlock>>>(d_Residue);
-cudaDeviceSynchronize;
-cudaMemcpy(This_Structure.Residue,d_Residue,This_Structure.length*sizeof(struct Amino_Acid),cudaMemcpyDeviceToHost);
+cudaDeviceSynchronize();
+cudaMemcpy(This_Structure.Residue,d_Residue,(This_Structure.length+1)*sizeof(struct Amino_Acid),cudaMemcpyDeviceToHost);
 cudaFree(d_Residue);
 free(Residue);
 /************/
@@ -232,7 +232,7 @@ void electric_field( struct Structure This_Structure , float grid_span , int gri
 
   /* Co-ordinates */
 
-  int	x , y , z ;
+  int	x , y , z,a=0;
   float		x_centre , y_centre , z_centre ;//scope for cuda
 
   /* Variables */
@@ -250,20 +250,19 @@ cudaMalloc((void**)&phi,sizeof(float));
 zero_interaction_grid<<<1,threadsperblock>>>(grid,grid_size);
 cudaDeviceSynchronize();
 struct Amino_Acid *Residue,*d_Residue;
-Residue = (struct Amino_Acid*)malloc(This_Structure.length*sizeof(Amino_Acid));
-int a=0;
-for (int i = 0; i < This_Structure.length; i++)
+Residue = (struct Amino_Acid*)malloc((This_Structure.length+1)*sizeof(Amino_Acid));
+for (int i = 1; i <= This_Structure.length; i++)
 {
   Residue[i]=This_Structure.Residue[i];
-  cudaMalloc(&Residue[i].Atom,This_Structure.Residue[i].size*sizeof(struct Atom));
-  cudaMemcpy(Residue[i].Atom,This_Structure.Residue[i].Atom,This_Structure.Residue[i].size*sizeof(struct Atom),cudaMemcpyHostToDevice);
+  cudaMalloc((void**)&Residue[i].Atom,(This_Structure.Residue[i].size+1)*sizeof(struct Atom));
+  cudaMemcpy(Residue[i].Atom,This_Structure.Residue[i].Atom,(This_Structure.Residue[i].size+1)*sizeof(struct Atom),cudaMemcpyHostToDevice);
   a=max(a,This_Structure.Residue[i].size);
   
 }
 cudaMalloc((void**)&d_Residue,This_Structure.length*sizeof(struct Amino_Acid));
 cudaMemcpy(d_Residue,Residue,This_Structure.length*sizeof(struct Amino_Acid),cudaMemcpyHostToDevice);
-
-  dim3 threadPerBlock1(a,This_Structure.length);
+  
+dim3 threadPerBlock1(a+1,This_Structure.length+1);
 
 
 /************/
@@ -290,81 +289,81 @@ cudaMemcpy(d_Residue,Residue,This_Structure.length*sizeof(struct Amino_Acid),cud
 
 
 /************************/
+__global__ void helper_point_charge_GPU(Amino_Acid *Residue,float one_span,int x_low,int y_low,int z_low,float a,float b,float c,int grid_size,cufftReal *grid,int residue,int atom )
+{
+  float		x_corner , y_corner , z_corner ;
+  int x=threadIdx.x + x_low;
+  int y=threadIdx.y + y_low;
+  int z=threadIdx.z + z_low;
+  int x_high = x_low + 1 ;
+  int y_high = y_low + 1 ;
+  int z_high = z_low + 1 ;
+  
 
+  x_corner = one_span * ( (float)( x - x_high ) + .5 ) ;
+  y_corner = one_span * ( (float)( y - y_high ) + .5 ) ;
+  z_corner = one_span * ( (float)( z - z_high ) + .5 ) ;
+  float w = ( ( x_corner + a ) * ( y_corner + b ) * ( z_corner + c ) ) / ( 8.0 * x_corner * y_corner * z_corner ) ;
+  grid[gaddress(x,y,z,grid_size)] += (cufftReal)( w*Residue[residue].Atom[atom].charge ) ;
 
+}
 
+__global__ void point_charge_GPU(Amino_Acid *Residue,float one_span,float grid_span,int grid_size,cufftReal *grid )
+{
+    int residue=threadIdx.y;
+    int atom=threadIdx.x;
+    int x_low, y_low, z_low;
+    if((residue>0)&&(atom>0)&&(atom<=Residue[residue].size))
+    {
+        if(Residue[residue].Atom[atom].charge != 0 ) {
+
+        x_low = gord( Residue[residue].Atom[atom].coord[1] - ( one_span / 2 ) , grid_span , grid_size ) ;
+        y_low = gord( Residue[residue].Atom[atom].coord[2] - ( one_span / 2 ) , grid_span , grid_size ) ;
+        z_low = gord( Residue[residue].Atom[atom].coord[3] - ( one_span / 2 ) , grid_span , grid_size ) ;
+
+        float a = Residue[residue].Atom[atom].coord[1] - gcentre( x_low , grid_span , grid_size ) - ( one_span / 2 ) ;
+        float b = Residue[residue].Atom[atom].coord[2] - gcentre( y_low , grid_span , grid_size ) - ( one_span / 2 ) ;
+        float c = Residue[residue].Atom[atom].coord[3] - gcentre( z_low , grid_span , grid_size ) - ( one_span / 2 ) ;
+
+        dim3 threadPerblock(2,2,2);
+        helper_point_charge_GPU<<<1,threadPerblock>>>(Residue,one_span,x_low,y_low,z_low,a,b,c,grid_size,grid,residue,atom);
+        cudaDeviceSynchronize();
+ 
+        }
+    }
+}
 void electric_point_charge( struct Structure This_Structure , float grid_span , int grid_size , cufftReal *grid ) {
 
 /************/
-
-  /* Counters */
-
-  int	residue , atom ;
-
-  /* Co-ordinates */
-
-  int	x , y , z ;
-  int	x_low , x_high , y_low , y_high , z_low , z_high ;
-
-  float		a , b , c ;
-  float		x_corner , y_corner , z_corner ;
-  float		w ;
 
   /* Variables */
 
   float		one_span ;
 
 /************/
+int a=0;
 dim3 threadsperblock(grid_size,grid_size,grid_size);
 zero_interaction_grid<<<1,threadsperblock>>>(grid,grid_size);
 cudaDeviceSynchronize();
 
 
 /************/
-
+struct Amino_Acid *Residue,*d_Residue;
+Residue = (struct Amino_Acid*)malloc((This_Structure.length+1)*sizeof(Amino_Acid));
+for (int i = 1; i <= This_Structure.length; i++)
+{
+  Residue[i]=This_Structure.Residue[i];
+  cudaMalloc((void**)&Residue[i].Atom,(This_Structure.Residue[i].size+1)*sizeof(struct Atom));
+  cudaMemcpy(Residue[i].Atom,This_Structure.Residue[i].Atom,(This_Structure.Residue[i].size+1)*sizeof(struct Atom),cudaMemcpyHostToDevice);
+  a=max(a,This_Structure.Residue[i].size);
+  
+}
+cudaMalloc((void**)&d_Residue,(This_Structure.length+1)*sizeof(struct Amino_Acid));
+cudaMemcpy(d_Residue,Residue,(This_Structure.length+1)*sizeof(struct Amino_Acid),cudaMemcpyHostToDevice);
+dim3 threadPerBlock1(a+1,This_Structure.length+1);
   one_span = grid_span / (float)grid_size ;
-
-  for( residue = 1 ; residue <= This_Structure.length ; residue ++ ) {
-    for( atom = 1 ; atom <= This_Structure.Residue[residue].size ; atom ++ ) {
-
-      if( This_Structure.Residue[residue].Atom[atom].charge != 0 ) {
-
-        x_low = gord( This_Structure.Residue[residue].Atom[atom].coord[1] - ( one_span / 2 ) , grid_span , grid_size ) ;
-        y_low = gord( This_Structure.Residue[residue].Atom[atom].coord[2] - ( one_span / 2 ) , grid_span , grid_size ) ;
-        z_low = gord( This_Structure.Residue[residue].Atom[atom].coord[3] - ( one_span / 2 ) , grid_span , grid_size ) ;
-
-        x_high = x_low + 1 ;
-        y_high = y_low + 1 ;
-        z_high = z_low + 1 ;
-
-        a = This_Structure.Residue[residue].Atom[atom].coord[1] - gcentre( x_low , grid_span , grid_size ) - ( one_span / 2 ) ;
-        b = This_Structure.Residue[residue].Atom[atom].coord[2] - gcentre( y_low , grid_span , grid_size ) - ( one_span / 2 ) ;
-        c = This_Structure.Residue[residue].Atom[atom].coord[3] - gcentre( z_low , grid_span , grid_size ) - ( one_span / 2 ) ;
-
-        for( x = x_low ; x <= x_high  ; x ++ ) {
- 
-          x_corner = one_span * ( (float)( x - x_high ) + .5 ) ;
-
-          for( y = y_low ; y <= y_high  ; y ++ ) {
-
-            y_corner = one_span * ( (float)( y - y_high ) + .5 ) ;
-
-            for( z = z_low ; z <= z_high  ; z ++ ) {
-
-              z_corner = one_span * ( (float)( z - z_high ) + .5 ) ;
-
-              w = ( ( x_corner + a ) * ( y_corner + b ) * ( z_corner + c ) ) / ( 8.0 * x_corner * y_corner * z_corner ) ;
-
-              grid[gaddress(x,y,z,grid_size)] += (cufftReal)( w * This_Structure.Residue[residue].Atom[atom].charge ) ;
-
-            }
-          }
-        }
-
-      }
-
-    }
-  }
+  point_charge_GPU<<<1,threadPerBlock1>>>(d_Residue,one_span,grid_span,grid_size,grid);
+  cudaDeviceSynchronize();
 
 /************/
 
