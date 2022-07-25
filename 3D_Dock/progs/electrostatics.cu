@@ -138,6 +138,8 @@ cudaMalloc((void**)&d_Residue,This_Structure.length*sizeof(struct Amino_Acid));
 cudaMemcpy(d_Residue,Residue,This_Structure.length*sizeof(struct Amino_Acid),cudaMemcpyHostToDevice);
 
 dim3 threadPerBlock(a+1,This_Structure.length+1);
+printf("\natom = %d",a);
+printf("\nresidue = %d\n",This_Structure.length);
 assign_charges_on_GPU<<<1,threadPerBlock>>>(d_Residue);
 cudaDeviceSynchronize();
 cudaMemcpy(This_Structure.Residue,d_Residue,(This_Structure.length+1)*sizeof(struct Amino_Acid),cudaMemcpyDeviceToHost);

@@ -159,7 +159,7 @@ __global__ void surface_grid( float grid_span , int grid_size , cufftReal *grid 
 
   /* Counters */
 
-  int	x=threadIdx.x , y=threadIdx.y , z=threadIdx.z ;
+  int	x=threadIdx.x , y=threadIdx.y , z=threadIdx.z +(blockIdx.z*blockDim.z);
   int	steps , x_step , y_step , z_step ;
 
   /* Variables */
@@ -169,6 +169,7 @@ __global__ void surface_grid( float grid_span , int grid_size , cufftReal *grid 
   int	at_surface ;
 
 /************/
+if(z<grid_size){
 
   one_span = grid_span / (float)grid_size ;
 
@@ -200,7 +201,7 @@ __global__ void surface_grid( float grid_span , int grid_size , cufftReal *grid 
           if( at_surface == 0 ) grid[gaddress(x,y,z,grid_size)] = (cufftReal)internal_value ;
 
         }
-
+}
 /************/
 
   return ;

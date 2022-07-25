@@ -565,8 +565,10 @@ int main( int argc , char *argv[] ) {
   
   discretise_structure( Origin_Static_Structure , grid_span , global_grid_size , static_grid,size1);
   printf( "  surfacing grid\n") ;
-  dim3 threadsperblock(global_grid_size,global_grid_size,global_grid_size);
-  surface_grid<<<1,threadsperblock>>>( grid_span , global_grid_size , static_grid , surface , internal_value ) ;
+  printf("grid_size = %d\n",global_grid_size);
+  dim3 threadsperblock(global_grid_size,global_grid_size,64);
+  dim3 numblocks(1,1,((global_grid_size-1)/64)+1);
+  surface_grid<<<numblocks,threadsperblock>>>( grid_span , global_grid_size , static_grid , surface , internal_value ) ;
   cudaDeviceSynchronize();
 
   /* Calculate electic field at all grid nodes (need do only once) */
