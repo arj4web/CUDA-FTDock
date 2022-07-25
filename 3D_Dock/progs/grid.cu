@@ -32,8 +32,9 @@ __global__ void zero1_interaction_grid(cufftReal *grid,int grid_size)
 {
     int x=threadIdx.x;
     int y=threadIdx.y;
-    int z=threadIdx.z;
-    grid[gaddress(x,y,z,grid_size)] = (cufftReal)0;
+    int z=threadIdx.z+blockDim.z*blockIdx.z;
+
+    if(z<grid_size)grid[gaddress(x,y,z,grid_size)] = (cufftReal)0;
 }
 
 __global__ void interaction_grid(cufftReal *grid, Amino_Acid *Residue,float grid_span , int grid_size ,int steps)
@@ -53,7 +54,7 @@ __global__ void interaction_grid(cufftReal *grid, Amino_Acid *Residue,float grid
 
 
 
-    if((residue>0)&&(atom>0)&&(atom<Residue[residue].size))
+    if((residue>0)&&(atom>0)&&(atom<=Residue[residue].size))
     {
 
         
@@ -110,29 +111,30 @@ void discretise_structure( struct Structure This_Structure , float grid_span , i
   distance = 1.8 ;
 
 /************/
-dim3 threadsperblock(grid_size,grid_size,grid_size);
+dim3 threadsperblock(grid_size,grid_size,64);
+dim3 numblocks(1,1,((grid_size-1)/64)+1);
 
 
-zero1_interaction_grid<<<1,threadsperblock>>>(grid,grid_size);
+zero1_interaction_grid<<<numblocks,threadsperblock>>>(grid,grid_size);
 cudaDeviceSynchronize();
 
 
 /************/
 struct Amino_Acid *Residue,*d_Residue;
-Residue = (struct Amino_Acid*)malloc(This_Structure.length*sizeof(Amino_Acid));
+Residue = (struct Amino_Acid*)malloc((This_Structure.length+1)*sizeof(Amino_Acid));
 int a=0;
-for (int i = 0; i < This_Structure.length; i++)
+for (int i = 1; i <=This_Structure.length; i++)
 {
   Residue[i]=This_Structure.Residue[i];
-  cudaMalloc(&Residue[i].Atom,This_Structure.Residue[i].size*sizeof(struct Atom));
-  cudaMemcpy(Residue[i].Atom,This_Structure.Residue[i].Atom,This_Structure.Residue[i].size*sizeof(struct Atom),cudaMemcpyHostToDevice);
+  cudaMalloc(&Residue[i].Atom,(This_Structure.Residue[i].size+1)*sizeof(struct Atom));
+  cudaMemcpy(Residue[i].Atom,This_Structure.Residue[i].Atom,(This_Structure.Residue[i].size+1)*sizeof(struct Atom),cudaMemcpyHostToDevice);
   a=max(a,This_Structure.Residue[i].size);
   
 }
-cudaMalloc((void**)&d_Residue,This_Structure.length*sizeof(struct Amino_Acid));
-cudaMemcpy(d_Residue,Residue,This_Structure.length*sizeof(struct Amino_Acid),cudaMemcpyHostToDevice);
+cudaMalloc((void**)&d_Residue,(This_Structure.length+1)*sizeof(struct Amino_Acid));
+cudaMemcpy(d_Residue,Residue,(This_Structure.length+1)*sizeof(struct Amino_Acid),cudaMemcpyHostToDevice);
 
-  dim3 threadPerBlock(a,This_Structure.length);
+  dim3 threadPerBlock(a+1,This_Structure.length+1);
   steps = (int)( ( distance / one_span ) + 1.5 ) ;
   interaction_grid<<<1,threadPerBlock>>>(grid, d_Residue, grid_span,grid_size,steps);
   cudaDeviceSynchronize();

@@ -385,12 +385,11 @@ __global__ void electric_field_zero_core( int grid_size , cufftReal *elec_grid ,
 
   /* Co-ordinates */
 
-  int	x=threadIdx.x,y=threadIdx.y,z=threadIdx.z;
+  int	x=threadIdx.x,y=threadIdx.y,z=threadIdx.z+(blockIdx.z*blockDim.z);
 
 /************/
 
-  
-        if( surface_grid[gaddress(x,y,z,grid_size)] == (cufftReal)internal_value ) elec_grid[gaddress(x,y,z,grid_size)] = (cufftReal)0 ;
+  if(z<grid_size)if( surface_grid[gaddress(x,y,z,grid_size)] == (cufftReal)internal_value ) elec_grid[gaddress(x,y,z,grid_size)] = (cufftReal)0 ;
 
 
 
