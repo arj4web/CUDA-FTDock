@@ -84,7 +84,7 @@ __global__ void assign_charges_on_GPU(struct Amino_Acid *Residue,int ydim)
 {
   int residue=threadIdx.y+(blockDim.y*blockIdx.y);
   int atom=threadIdx.x+(blockDim.x*blockIdx.x);
-  
+  printf("whatup\n");
 
 
   if((residue>0)&&(atom>0)&&(atom<=Residue[residue].size)&&(residue<ydim)){
@@ -104,7 +104,7 @@ __global__ void assign_charges_on_GPU(struct Amino_Acid *Residue,int ydim)
 
     if( my_strcmp( Residue[residue].Atom[atom].atom_name , " O  ",3 ) == 0 ) {
         Residue[residue].Atom[atom].charge = -0.55 ;
-        if( residue == len-1)Residue[residue].Atom[atom].charge = -1.00 ;
+        if( residue == ydim-1)Residue[residue].Atom[atom].charge = -1.00 ;
       }
      /* charged residues */
 
