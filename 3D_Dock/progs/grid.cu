@@ -26,22 +26,20 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
-
 #include "structures.cuh"
 
 __global__ void zero1_interaction_grid(cufftReal *grid,int grid_size)
 {
-    int x=threadIdx.x +(blockDim.x*blockIdx.x);
-    int y=threadIdx.y+ (blockDim.y*blockIdx.y);
-    int z=threadIdx.z + (blockDim.z*blockIdx.z);
-  
-    if(z<grid_size&&x<grid_size&&y<grid_size)grid[gaddress(x,y,z,grid_size)] = (cufftReal)0;
+    int x=threadIdx.x;
+    int y=threadIdx.y;
+    int z=threadIdx.z;
+    grid[gaddress(x,y,z,grid_size)] = (cufftReal)0;
 }
 
-__global__ void interaction_grid(cufftReal *grid, Amino_Acid *Residue,float grid_span , int grid_size ,int steps,int ydim)
+__global__ void interaction_grid(cufftReal *grid, Amino_Acid *Residue,float grid_span , int grid_size ,int steps)
 {
-  int residue=threadIdx.y+(blockDim.y*blockIdx.y);
-  int atom=threadIdx.x+(blockDim.x*blockIdx.x);
+    int residue=threadIdx.y;
+    int atom=threadIdx.x;
     int x_step , y_step , z_step ;
 
      float		x_centre , y_centre , z_centre ;
@@ -54,8 +52,8 @@ __global__ void interaction_grid(cufftReal *grid, Amino_Acid *Residue,float grid
      distance = 1.8 ;
 
 
-if(residue<ydim){
-    if((residue>0)&&(atom>0)&&(atom<=Residue[residue].size))
+
+    if((residue>0)&&(atom>0)&&(atom<Residue[residue].size))
     {
 
         
@@ -86,7 +84,6 @@ if(residue<ydim){
 
 }
 }
-}
 
 void discretise_structure( struct Structure This_Structure , float grid_span , int grid_size , cufftReal *grid, int size1 ) {
 
@@ -113,32 +110,31 @@ void discretise_structure( struct Structure This_Structure , float grid_span , i
   distance = 1.8 ;
 
 /************/
-
-dim3 numblocks(((grid_size-1)/threadperblock3D.x)+1,((grid_size-1)/threadperblock3D.y)+1,((grid_size-1)/threadperblock3D.z)+1);
-
+dim3 threadsperblock(grid_size,grid_size,grid_size);
 
 
-zero1_interaction_grid<<<numblocks,threadperblock3D>>>(grid,grid_size);
+zero1_interaction_grid<<<1,threadsperblock>>>(grid,grid_size);
 cudaDeviceSynchronize();
 
 
 /************/
 struct Amino_Acid *Residue,*d_Residue;
-Residue = (struct Amino_Acid*)malloc((This_Structure.length+1)*sizeof(Amino_Acid));
+Residue = (struct Amino_Acid*)malloc(This_Structure.length*sizeof(Amino_Acid));
 int a=0;
-for (int i = 1; i <=This_Structure.length; i++)
+for (int i = 0; i < This_Structure.length; i++)
 {
   Residue[i]=This_Structure.Residue[i];
-  cudaMalloc(&Residue[i].Atom,(This_Structure.Residue[i].size+1)*sizeof(struct Atom));
-  cudaMemcpy(Residue[i].Atom,This_Structure.Residue[i].Atom,(This_Structure.Residue[i].size+1)*sizeof(struct Atom),cudaMemcpyHostToDevice);
+  cudaMalloc(&Residue[i].Atom,This_Structure.Residue[i].size*sizeof(struct Atom));
+  cudaMemcpy(Residue[i].Atom,This_Structure.Residue[i].Atom,This_Structure.Residue[i].size*sizeof(struct Atom),cudaMemcpyHostToDevice);
   a=max(a,This_Structure.Residue[i].size);
   
 }
-cudaMalloc((void**)&d_Residue,(This_Structure.length+1)*sizeof(struct Amino_Acid));
-cudaMemcpy(d_Residue,Residue,(This_Structure.length+1)*sizeof(struct Amino_Acid),cudaMemcpyHostToDevice);
-dim3 numblocks1((a/threadperblock2D.x)+1,(This_Structure.length/threadperblock2D.y)+1);
+cudaMalloc((void**)&d_Residue,This_Structure.length*sizeof(struct Amino_Acid));
+cudaMemcpy(d_Residue,Residue,This_Structure.length*sizeof(struct Amino_Acid),cudaMemcpyHostToDevice);
+
+  dim3 threadPerBlock(a,This_Structure.length);
   steps = (int)( ( distance / one_span ) + 1.5 ) ;
-  interaction_grid<<<numblocks1,threadperblock2D>>>(grid, d_Residue, grid_span,grid_size,steps,This_Structure.length+1);
+  interaction_grid<<<1,threadPerBlock>>>(grid, d_Residue, grid_span,grid_size,steps);
   cudaDeviceSynchronize();
   cudaFree(d_Residue);
   
@@ -162,11 +158,8 @@ __global__ void surface_grid( float grid_span , int grid_size , cufftReal *grid 
 /************/
 
   /* Counters */
-  printf("yooyooyoyoyoyoyo\n\n\n");
 
-  int x=threadIdx.x +(blockDim.x*blockIdx.x);
-  int y=threadIdx.y+ (blockDim.y*blockIdx.y);
-  int z=threadIdx.z + (blockDim.z*blockIdx.z);
+  int	x=threadIdx.x , y=threadIdx.y , z=threadIdx.z ;
   int	steps , x_step , y_step , z_step ;
 
   /* Variables */
@@ -176,7 +169,6 @@ __global__ void surface_grid( float grid_span , int grid_size , cufftReal *grid 
   int	at_surface ;
 
 /************/
-if(z<grid_size&&y<grid_size&&z<grid_size){
 
   one_span = grid_span / (float)grid_size ;
 
@@ -208,7 +200,7 @@ if(z<grid_size&&y<grid_size&&z<grid_size){
           if( at_surface == 0 ) grid[gaddress(x,y,z,grid_size)] = (cufftReal)internal_value ;
 
         }
-}
+
 /************/
 
   return ;
