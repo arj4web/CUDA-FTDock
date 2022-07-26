@@ -24,7 +24,7 @@ SHELL           = /bin/sh
 
 NVCC              = nvcc
 
-NVCC_FLAGS        = -arch=compute_75 -rdc=true -m64
+NVCC_FLAGS        = -arch=sm_75 -rdc=true -m64
 
 NVCC_LINKERS      = -lm
 

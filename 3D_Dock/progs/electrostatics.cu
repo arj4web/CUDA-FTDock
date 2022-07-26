@@ -81,11 +81,10 @@ __device__ int my_strcmp(const char *str_a, const char *str_b, unsigned len = 25
   }
 __global__ void assign_charges_on_GPU(struct Amino_Acid *Residue)
 {
-  int residue=threadIdx.y;
-  int atom=threadIdx.x;
-  int len= blockDim.y;
 
-
+  int residue=threadIdx.y+(blockDim.y*blockIdx.y);
+  int atom=threadIdx.x+(blockDim.x*blockIdx.x);
+if(residue<ydim){
   if((residue>0)&&(atom>0)&&(atom<=Residue[residue].size)){
 
     Residue[residue].Atom[atom].charge = 0.0;
@@ -103,7 +102,7 @@ __global__ void assign_charges_on_GPU(struct Amino_Acid *Residue)
 
     if( my_strcmp( Residue[residue].Atom[atom].atom_name , " O  ",3 ) == 0 ) {
         Residue[residue].Atom[atom].charge = -0.55 ;
-        if( residue == len-1)Residue[residue].Atom[atom].charge = -1.00 ;
+        if( residue == ydim-1)Residue[residue].Atom[atom].charge = -1.00 ;
       }
      /* charged residues */
 
@@ -113,8 +112,8 @@ __global__ void assign_charges_on_GPU(struct Amino_Acid *Residue)
       if( ( my_strcmp( Residue[residue].res_name , "LYS",3 ) == 0 ) && ( my_strcmp( Residue[residue].Atom[atom].atom_name , " NZ ",3 ) == 0 ) )Residue[residue].Atom[atom].charge =  1.00 ;
 
   }
+  }
 }
-
 void assign_charges( struct Structure This_Structure ) {
 
 /************/
@@ -137,8 +136,9 @@ for (int i = 1; i <= This_Structure.length; i++)
 cudaMalloc((void**)&d_Residue,This_Structure.length*sizeof(struct Amino_Acid));
 cudaMemcpy(d_Residue,Residue,This_Structure.length*sizeof(struct Amino_Acid),cudaMemcpyHostToDevice);
 
-dim3 threadPerBlock(a+1,This_Structure.length+1);
-assign_charges_on_GPU<<<1,threadPerBlock>>>(d_Residue);
+
+dim3 numblocks((a/threadperblock2D.x)+1,(This_Structure.length/threadperblock2D.y)+1);
+assign_charges_on_GPU<<<numblocks,threadperblock2D>>>(d_Residue,This_Structure.length+1);
 cudaDeviceSynchronize();
 cudaMemcpy(This_Structure.Residue,d_Residue,(This_Structure.length+1)*sizeof(struct Amino_Acid),cudaMemcpyDeviceToHost);
 cudaFree(d_Residue);
@@ -152,10 +152,16 @@ free(Residue);
 /************************/
 __global__ void zero_interaction_grid(cufftReal *grid,int grid_size)
 {
-    int x=threadIdx.x;
-    int y=threadIdx.y;
-    int z=threadIdx.z;
-    grid[gaddress(x,y,z,grid_size)] = (cufftReal)0;
+
+    int x=threadIdx.x +(blockDim.x*blockIdx.x);
+    int y=threadIdx.y+ (blockDim.y*blockIdx.y);
+    int z=threadIdx.z + (blockDim.z*blockIdx.z);
+
+
+    if(z<grid_size&&x<grid_size&&y<grid_size)
+    {
+      grid[gaddress(x,y,z,grid_size)] = (cufftReal)0;
+    }
 }
 __global__ void field_calculation(float *phi,Amino_Acid *Residue,float x_centre,float y_centre,float z_centre)
 {
@@ -163,9 +169,18 @@ __global__ void field_calculation(float *phi,Amino_Acid *Residue,float x_centre,
    int atom=threadIdx.x;
    float		distance ;
    float epsilon ;
-   if((residue>0)&&(atom>0)&&(atom<Residue[residue].size))
-   {
-      
+    
+    if(z<grid_size&&x<grid_size&&y<grid_size){
+    if (y==0&&z==0)
+    {
+      printf( "." );
+    }
+    float x_centre  = gcentre( x , grid_span , grid_size ) ;
+    float y_centre  = gcentre( y , grid_span , grid_size ) ;
+    float z_centre  = gcentre( z , grid_span , grid_size ) ;
+    float phi=0;
+        for( int residue = 1 ; residue <= size1 ; residue ++ ) {
+          for( int atom = 1 ; atom <=Residue[residue].size ; atom ++ ) {
             if(Residue[residue].Atom[atom].charge != 0 ) {
 
               distance = pythagoras( Residue[residue].Atom[atom].coord[1] , Residue[residue].Atom[atom].coord[2] , Residue[residue].Atom[atom].coord[3] , x_centre , y_centre , z_centre ) ;
@@ -308,11 +323,12 @@ __global__ void helper_point_charge_GPU(Amino_Acid *Residue,float one_span,int x
 
 }
 
-__global__ void point_charge_GPU(Amino_Acid *Residue,float one_span,float grid_span,int grid_size,cufftReal *grid )
+__global__ void point_charge_GPU(Amino_Acid *Residue,float one_span,float grid_span,int grid_size,cufftReal *grid,int ydim )
 {
-    int residue=threadIdx.y;
-    int atom=threadIdx.x;
+    int residue=threadIdx.y+(blockIdx.y*blockDim.y);
+    int atom=threadIdx.x+(blockIdx.x*blockDim.x);
     int x_low, y_low, z_low;
+    if(residue<ydim){
     if((residue>0)&&(atom>0)&&(atom<=Residue[residue].size))
     {
         if(Residue[residue].Atom[atom].charge != 0 ) {
@@ -331,7 +347,9 @@ __global__ void point_charge_GPU(Amino_Acid *Residue,float one_span,float grid_s
  
         }
     }
+  }
 }
+
 void electric_point_charge( struct Structure This_Structure , float grid_span , int grid_size , cufftReal *grid ) {
 
 /************/
@@ -342,10 +360,14 @@ void electric_point_charge( struct Structure This_Structure , float grid_span , 
 
 /************/
 int a=0;
-dim3 threadsperblock(grid_size,grid_size,grid_size);
-zero_interaction_grid<<<1,threadsperblock>>>(grid,grid_size);
-cudaDeviceSynchronize();
+dim3 numblocks(((grid_size-1)/threadperblock3D.x)+1,((grid_size-1)/threadperblock3D.y)+1,((grid_size-1)/threadperblock3D.z)+1);
 
+
+
+
+
+zero_interaction_grid<<<numblocks,threadperblock3D>>>(grid,grid_size);
+cudaDeviceSynchronize();
 
 /************/
 struct Amino_Acid *Residue,*d_Residue;
@@ -360,9 +382,9 @@ for (int i = 1; i <= This_Structure.length; i++)
 }
 cudaMalloc((void**)&d_Residue,(This_Structure.length+1)*sizeof(struct Amino_Acid));
 cudaMemcpy(d_Residue,Residue,(This_Structure.length+1)*sizeof(struct Amino_Acid),cudaMemcpyHostToDevice);
-dim3 threadPerBlock1(a+1,This_Structure.length+1);
+dim3 numblock1((a/threadperblock2D.x)+1,(This_Structure.length/threadperblock2D.y)+1);
   one_span = grid_span / (float)grid_size ;
-  point_charge_GPU<<<1,threadPerBlock1>>>(d_Residue,one_span,grid_span,grid_size,grid);
+  point_charge_GPU<<<numblock1,threadperblock2D>>>(d_Residue,one_span,grid_span,grid_size,grid,This_Structure.length+1);
   cudaDeviceSynchronize();
 
 /************/
@@ -383,7 +405,9 @@ __global__ void electric_field_zero_core( int grid_size , cufftReal *elec_grid ,
 
   /* Co-ordinates */
 
-  int	x=threadIdx.x,y=threadIdx.y,z=threadIdx.z;
+
+  int	x=threadIdx.x+(blockIdx.x*blockDim.x),y=threadIdx.y+(blockIdx.y*blockDim.y),z=threadIdx.z+(blockIdx.z*blockDim.z);
+
 
 /************/
 
