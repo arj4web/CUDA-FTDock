@@ -58,6 +58,7 @@ __global__ void all_rotation(Angle Angles,int n,int angle_step,int phi_step_for_
           Angles.theta[n+k]   = theta ;
           Angles.phi[n+k]     = phi;
 
+
         }
       }
     }
@@ -129,7 +130,7 @@ dim3 numblock((359/threadperblock2D.x)+1,(359/threadperblock2D.x)+1);
 
     while( ( 360 % phi_step_for_this_theta ) != 0 ) phi_step_for_this_theta -- ;
 
-    all_rotation<<<numblock,threadperblock2D>>>(Angles, n, angle_step, phi_step_for_this_theta, theta);
+    all_rotation<<<numblock,threadperblock2D>>>(AnglesonGPU, n, angle_step, phi_step_for_this_theta, theta);
     cudaDeviceSynchronize();
     n+=(((359/phi_step_for_this_theta)+1)*((359/angle_step)+1)) ;
 
