@@ -575,6 +575,7 @@ int main( int argc , char *argv[] ) {
   if( electrostatics == 1 ) {
     electric_field( Origin_Static_Structure , grid_span , global_grid_size , static_elec_grid ) ;
     electric_field_zero_core<<<numblocks,threadperblock3D>>>( global_grid_size , static_elec_grid , static_grid , internal_value) ;
+
     cudaDeviceSynchronize();
     printf("%s is the status of electric field\n",cudaGetErrorName(cudaGetLastError()));
   }
