@@ -30,17 +30,17 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 __global__ void zero1_interaction_grid(cufftReal *grid,int grid_size)
 {
-    int x=threadIdx.x;
-    int y=threadIdx.y;
+    int x=threadIdx.x+(blockDim.x*blockIdx.x);
+    int y=threadIdx.y+(blockDim.y*blockIdx.y);
     int z=threadIdx.z+(blockDim.z*blockIdx.z);
 
-    if(z<grid_size)grid[gaddress(x,y,z,grid_size)] = (cufftReal)0;
+    if(z<grid_size&&x<grid_size&&y<grid_size)grid[gaddress(x,y,z,grid_size)] = (cufftReal)0;
 }
 
-__global__ void interaction_grid(cufftReal *grid, Amino_Acid *Residue,float grid_span , int grid_size ,int steps)
+__global__ void interaction_grid(cufftReal *grid, Amino_Acid *Residue,float grid_span , int grid_size ,int steps,int ydim)
 {
-    int residue=threadIdx.y;
-    int atom=threadIdx.x;
+  int residue=threadIdx.y+(blockDim.y*blockIdx.y);
+  int atom=threadIdx.x+(blockDim.x*blockIdx.x);
     int x_step , y_step , z_step ;
 
      float		x_centre , y_centre , z_centre ;
@@ -52,7 +52,7 @@ __global__ void interaction_grid(cufftReal *grid, Amino_Acid *Residue,float grid
 
      distance = 1.8 ;
 
-
+if(residue<ydim){
 
     if((residue>0)&&(atom>0)&&(atom<=Residue[residue].size))
     {
@@ -83,7 +83,8 @@ __global__ void interaction_grid(cufftReal *grid, Amino_Acid *Residue,float grid
 
     }
 
-}
+    }
+  }
 }
 
 void discretise_structure( struct Structure This_Structure , float grid_span , int grid_size , cufftReal *grid, int size1 ) {
@@ -111,11 +112,11 @@ void discretise_structure( struct Structure This_Structure , float grid_span , i
   distance = 1.8 ;
 
 /************/
-dim3 threadsperblock(grid_size,grid_size,64);
-dim3 numblocks(1,1,((grid_size-1)/64)+1);
+dim3 numblocks(((grid_size-1)/threadperblock3D.x)+1,((grid_size-1)/threadperblock3D.y)+1,((grid_size-1)/threadperblock3D.z)+1);
 
 
-zero1_interaction_grid<<<numblocks,threadsperblock>>>(grid,grid_size);
+
+zero1_interaction_grid<<<numblocks,threadperblock3D>>>(grid,grid_size);
 cudaDeviceSynchronize();
 
 
@@ -134,9 +135,9 @@ for (int i = 1; i <=This_Structure.length; i++)
 cudaMalloc((void**)&d_Residue,(This_Structure.length+1)*sizeof(struct Amino_Acid));
 cudaMemcpy(d_Residue,Residue,(This_Structure.length+1)*sizeof(struct Amino_Acid),cudaMemcpyHostToDevice);
 
-  dim3 threadPerBlock(a+1,This_Structure.length+1);
+  dim3 numblock1((a/threadperblock2D.x)+1,(This_Structure.length/threadperblock2D.y)+1);
   steps = (int)( ( distance / one_span ) + 1.5 ) ;
-  interaction_grid<<<1,threadPerBlock>>>(grid, d_Residue, grid_span,grid_size,steps);
+  interaction_grid<<<numblock1,threadperblock2D>>>(grid, d_Residue, grid_span,grid_size,steps,This_Structure.length+1);
   cudaDeviceSynchronize();
   cudaFree(d_Residue);
   
@@ -161,7 +162,7 @@ __global__ void surface_grid( float grid_span , int grid_size , cufftReal *grid 
 
   /* Counters */
 
-  int	x=threadIdx.x , y=threadIdx.y , z=threadIdx.z +(blockIdx.z*blockDim.z);
+  int	x=threadIdx.x+(blockIdx.x*blockDim.x) , y=threadIdx.y+(blockIdx.y*blockDim.y), z=threadIdx.z +(blockIdx.z*blockDim.z);
   int	steps , x_step , y_step , z_step ;
 
   /* Variables */
@@ -171,7 +172,7 @@ __global__ void surface_grid( float grid_span , int grid_size , cufftReal *grid 
   int	at_surface ;
 
 /************/
-if(z<grid_size){
+if(z<grid_size&&x<grid_size&&y<grid_size){
 
   one_span = grid_span / (float)grid_size ;
 

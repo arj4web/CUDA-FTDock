@@ -415,13 +415,13 @@ struct Structure translate_structure_onto_origin( struct Structure This_Structur
 
 /************************/
 
-__global__ void RotateonGPU(Amino_Acid *Residue,int z_twist , int theta , int phi )
+__global__ void RotateonGPU(Amino_Acid *Residue,int z_twist , int theta , int phi,int ydim )
 {
-  int residue=threadIdx.y;
-  int atom=threadIdx.x;
+  int residue=threadIdx.y+(blockDim.y*blockIdx.y);
+  int atom=threadIdx.x+(blockDim.x*blockIdx.x);
   float			post_z_twist_x , post_z_twist_y , post_z_twist_z ;
   float			post_theta_x , post_theta_y , post_theta_z ;
-
+if(residue<ydim){
   if((residue>0)&&(atom>0)&&(atom<=Residue[residue].size)){
       /* Perform Z axis twist */
       post_z_twist_x = Residue[residue].Atom[atom].coord[1] * cos( 0.017453293 * z_twist ) - Residue[residue].Atom[atom].coord[2] * sin( 0.017453293 * z_twist ) ;
@@ -441,10 +441,10 @@ __global__ void RotateonGPU(Amino_Acid *Residue,int z_twist , int theta , int ph
   
   }
 
+  }
+
+
 }
-
-
-
 struct Structure rotate_structure( struct Structure This_Structure , int z_twist , int theta , int phi ) {
 
 /************/
@@ -475,8 +475,8 @@ struct Structure rotate_structure( struct Structure This_Structure , int z_twist
   cudaMalloc((void**)&d_Residue,(This_Structure.length+1)*sizeof(struct Amino_Acid));
   cudaMemcpy(d_Residue,Residue,(This_Structure.length+1)*sizeof(struct Amino_Acid),cudaMemcpyHostToDevice);
 
-  dim3 threadPerBlock(a+1,This_Structure.length+1);
-  RotateonGPU<<<1,threadPerBlock>>>(d_Residue,z_twist,phi,theta);
+  dim3 numblocks((a/threadperblock2D.x)+1,(This_Structure.length/threadperblock2D.y)+1);
+  RotateonGPU<<<numblocks,threadperblock2D>>>(d_Residue,z_twist,phi,theta,This_Structure.length+1);
   cudaDeviceSynchronize();
 
 /************/
