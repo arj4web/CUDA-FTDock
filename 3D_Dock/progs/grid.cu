@@ -32,7 +32,7 @@ __global__ void zero1_interaction_grid(cufftReal *grid,int grid_size)
 {
     int x=threadIdx.x;
     int y=threadIdx.y;
-    int z=threadIdx.z+blockDim.z*blockIdx.z;
+    int z=threadIdx.z+(blockDim.z*blockIdx.z);
 
     if(z<grid_size)grid[gaddress(x,y,z,grid_size)] = (cufftReal)0;
 }

@@ -42,6 +42,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define NUMBER_TO_KEEP 10000
 #define NUMBER_OF_CONSTRAINTS 50
 #define SAVED_HEADER_LINES 1000
+extern const dim3 threadperblock2D;
+extern const dim3 threadperblock3D;
 
 /* I do not advise messing with anything below here */
 
