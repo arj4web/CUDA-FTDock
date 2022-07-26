@@ -32,7 +32,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <stdlib.h>
 #include <time.h>
 #include <cufft.h>
-// #include <rfftw.h>
+#include <cuda.h>
+
 
 /************/
 
@@ -42,8 +43,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define NUMBER_TO_KEEP 10000
 #define NUMBER_OF_CONSTRAINTS 50
 #define SAVED_HEADER_LINES 1000
-extern const dim3 threadperblock2D;
-extern const dim3 threadperblock3D;
+static const dim3 threadperblock2D(32,32);
+static const dim3 threadperblock3D(10,10,10);
 
 /* I do not advise messing with anything below here */
 
@@ -148,7 +149,7 @@ extern __device__ __host__ int gord( float position , float grid_span , int grid
 extern __device__ float pythagoras( float x1 , float y1 , float z1 , float x2 , float y2 , float z2 ) ;
 
 extern void discretise_structure( struct Structure This_Structure , float grid_span , int grid_size , cufftReal *grid,int size1) ;
-extern void __global__ surface_grid( float grid_span , int grid_size , cufftReal *grid , float surface , float internal_value ) ;
+extern __global__ void surface_grid( float grid_span , int grid_size , cufftReal *grid , float surface , float internal_value ) ;
 
 extern void assign_charges( struct Structure This_Structure ) ;
 extern void electric_field( struct Structure This_Structure , float grid_span , int grid_size , cufftReal *grid ) ;
