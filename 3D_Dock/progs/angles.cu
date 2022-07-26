@@ -26,13 +26,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
-
 #include "structures.cuh"
-
 
 __global__ void z_rotation(Angle Angles,int n,int angle_step,int theta)
 {
- 
     int i=threadIdx.x;
     if(i%angle_step==0)
     {
@@ -47,10 +44,9 @@ __global__ void z_rotation(Angle Angles,int n,int angle_step,int theta)
 }
 __global__ void all_rotation(Angle Angles,int n,int angle_step,int phi_step_for_this_theta,int theta)
 {
-
-    int z_twist=threadIdx.x+(blockIdx.x*blockDim.x);
-    int phi = threadIdx.y+(blockIdx.y*blockDim.y);
-    if(z_twist<360&&phi<360){
+    
+    int z_twist=threadIdx.x;
+    int phi = threadIdx.y;
       if (phi%phi_step_for_this_theta==0)
       {
         if(z_twist%angle_step==0)
@@ -62,7 +58,6 @@ __global__ void all_rotation(Angle Angles,int n,int angle_step,int phi_step_for_
 
         }
       }
-    }
 
 
 }
@@ -131,8 +126,8 @@ n+=(359/angle_step)+1;
     phi_step_for_this_theta = 57.29578 * acos( ( cos( 0.017453293 * angle_step ) - ( cos( 0.017453293 * theta ) * cos( 0.017453293 * theta ) ) ) / ( sin( 0.017453293 * theta ) * sin( 0.017453293 * theta ) ) ) ;
 
     while( ( 360 % phi_step_for_this_theta ) != 0 ) phi_step_for_this_theta -- ;
-    dim3 numblock((359/threadperblock2D.x)+1,(359/threadperblock2D.y)+1);
-    all_rotation<<<numblock,threadperblock2D>>>(Angles, n, angle_step, phi_step_for_this_theta, theta);
+    dim3 threadsperblock(360,360);
+    all_rotation<<<1,threadsperblock>>>(Angles, n, angle_step, phi_step_for_this_theta, theta);
     cudaDeviceSynchronize();
     n+=(((359/phi_step_for_this_theta)+1)*((359/angle_step)+1)) ;
 
