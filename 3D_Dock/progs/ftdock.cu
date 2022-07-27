@@ -463,7 +463,7 @@ int main( int argc , char *argv[] ) {
     assign_charges( Static_Structure );
     assign_charges( Mobile_Structure ) ;
     
-    printf("%s is the status of charge assingment\n",cudaGetErrorName(cudaGetLastError()));
+
   }
 
 /************/
@@ -568,18 +568,15 @@ int main( int argc , char *argv[] ) {
   /* Discretise and surface the Static Structure (need do only once) */
   
   discretise_structure( Origin_Static_Structure , grid_span , global_grid_size , static_grid,size1);
-  printf("%s is the status of discretise structure\n",cudaGetErrorName(cudaGetLastError()));
   printf( "  surfacing grid\n") ;
   dim3 numblocks(((global_grid_size-1)/threadperblock3D.x)+1,((global_grid_size-1)/threadperblock3D.y)+1,((global_grid_size-1)/threadperblock3D.z)+1);
   surface_grid<<<numblocks,threadperblock3D>>>( grid_span , global_grid_size , static_grid , surface , internal_value) ;
   cudaDeviceSynchronize();
-  printf("%s is the status of surface grid\n",cudaGetErrorName(cudaGetLastError()));
   /* Calculate electic field at all grid nodes (need do only once) */
   if( electrostatics == 1 ) {
     electric_field( Origin_Static_Structure , grid_span , global_grid_size , static_elec_grid ) ;
     electric_field_zero_core<<<numblocks,threadperblock3D>>>( global_grid_size , static_elec_grid , static_grid , internal_value) ;
     cudaDeviceSynchronize();
-    printf("%s is the status of electric field\n",cudaGetErrorName(cudaGetLastError()));
   }
 
   /* Fourier Transform the static grids (need do only once) */
@@ -590,7 +587,6 @@ int main( int argc , char *argv[] ) {
     result =cufftExecR2C( p , static_elec_grid , static_elec_fsg ) ;
     cudaDeviceSynchronize();
   }
-  printf("%s is the status of fft\n",cudaGetErrorName(cudaGetLastError()));
 
   printf( "  done\n" ) ;
 
@@ -645,15 +641,15 @@ int main( int argc , char *argv[] ) {
 
     /* Rotate Mobile Structure */
     Rotated_at_Origin_Mobile_Structure = rotate_structure( Origin_Mobile_Structure , (int)Angles.z_twist[rotation] , (int)Angles.theta[rotation] , (int)Angles.phi[rotation] ) ;
-    printf("\n%s is the status of rotate structure\n",cudaGetErrorName(cudaGetLastError()));
+
     /* Discretise the rotated Mobile Structure */
     discretise_structure( Rotated_at_Origin_Mobile_Structure , grid_span , global_grid_size , mobile_grid,size1) ;
-    printf("\n%s is the status of discretise structure\n",cudaGetErrorName(cudaGetLastError()));
+  
     /* Electic point charge approximation onto grid calculations ( quicker than filed calculations by a long way! ) */
     if( electrostatics == 1 ) {
      
       electric_point_charge( Rotated_at_Origin_Mobile_Structure , grid_span , global_grid_size , mobile_elec_grid) ;
-      printf("\n%s is the status of discretise structure\n",cudaGetErrorName(cudaGetLastError()));
+
     }
       
 
@@ -675,7 +671,7 @@ int main( int argc , char *argv[] ) {
    dim3 numblockconvo(((global_grid_size-1)/threadperblock3D.x)+1,((global_grid_size-1)/threadperblock3D.y)+1,((global_grid_size/2)/threadperblock3D.z)+1);
    convolution<<<numblockconvo,threadperblock3D>>>(static_fsg,multiple_fsg,mobile_fsg,static_elec_fsg,mobile_elec_fsg,multiple_elec_fsg,electrostatics,global_grid_size);
    cudaDeviceSynchronize();
-   printf("\n%s is the status of convolution structure\n",cudaGetErrorName(cudaGetLastError()));
+  
   
     /* Reverse Fourier Transform */
     result = cufftExecC2R( pinv , multiple_fsg , convoluted_grid ) ;
@@ -695,7 +691,7 @@ int main( int argc , char *argv[] ) {
       
     get_score<<<numblocks,threadperblock3D>>>(d_Scores,convoluted_grid,convoluted_elec_grid,electrostatics,keep_per_rotation,global_grid_size);
     cudaDeviceSynchronize();
-    printf("\n%s is the status of get_score\n",cudaGetErrorName(cudaGetLastError()));
+  
     cudaMemcpy(Scores,d_Scores,( keep_per_rotation + 2 ) * sizeof( struct Score ),cudaMemcpyDeviceToHost);
     cudaFree(d_Scores);
     
