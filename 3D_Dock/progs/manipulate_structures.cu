@@ -480,8 +480,16 @@ struct Structure rotate_structure( struct Structure This_Structure , int z_twist
   cudaDeviceSynchronize();
 
 /************/
-
-  cudaMemcpy(New_Structure.Residue,d_Residue,(This_Structure.length+1)*sizeof(struct Amino_Acid),cudaMemcpyDeviceToHost);
+  cudaMemcpy(Residue,d_Residue,(This_Structure.length+1)*sizeof(struct Amino_Acid),cudaMemcpyDeviceToHost);
+  for (int i = 1; i <= This_Structure.length; i++)
+  {
+ 
+    cudaMemcpy(New_Structure.Residue[i].Atom,Residue[i].Atom,(This_Structure.Residue[i].size+1)*sizeof(struct Atom),cudaMemcpyDeviceToHost);
+    cudaFree(Residue[i].Atom);
+  
+  }
+  free(Residue);
+  cudaFree(d_Residue);
 
   return New_Structure ;
 
