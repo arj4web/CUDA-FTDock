@@ -584,10 +584,10 @@ int main( int argc , char *argv[] ) {
 
   /* Fourier Transform the static grids (need do only once) */
   printf( "  one time forward FFT calculations\n" ) ;
-  result = cufftExecR2C( p , static_grid , NULL ) ;
+  result = cufftExecR2C( p , static_grid , static_fsg ) ;
   cudaDeviceSynchronize();
   if( electrostatics == 1 ) {
-    result =cufftExecR2C( p , static_elec_grid , NULL ) ;
+    result =cufftExecR2C( p , static_elec_grid , static_elec_fsg ) ;
     cudaDeviceSynchronize();
   }
   printf("%s is the status of fft\n",cudaGetErrorName(cudaGetLastError()));
@@ -658,10 +658,10 @@ int main( int argc , char *argv[] ) {
       
 
     /* Forward Fourier Transforms */
-    result = cufftExecR2C( p , mobile_grid , NULL ) ;
+    result = cufftExecR2C( p , mobile_grid , mobile_fsg ) ;
     cudaDeviceSynchronize();
     if( electrostatics == 1 ) {
-          result = cufftExecR2C( p , mobile_elec_grid , NULL ) ;
+          result = cufftExecR2C( p , mobile_elec_grid , mobile_elec_fsg ) ;
           cudaDeviceSynchronize();
     }
 
@@ -678,10 +678,10 @@ int main( int argc , char *argv[] ) {
    printf("\n%s is the status of convolution structure\n",cudaGetErrorName(cudaGetLastError()));
   
     /* Reverse Fourier Transform */
-    result = cufftExecC2R( pinv , multiple_fsg , NULL ) ;
+    result = cufftExecC2R( pinv , multiple_fsg , convoluted_grid ) ;
     cudaDeviceSynchronize();
     if( electrostatics == 1 ) {
-      result = cufftExecC2R( pinv , multiple_elec_fsg , NULL ) ;
+      result = cufftExecC2R( pinv , multiple_elec_fsg , convoluted_elec_grid ) ;
       cudaDeviceSynchronize();
     }
    
