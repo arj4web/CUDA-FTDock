@@ -145,7 +145,7 @@ for (int i = 1; i <= This_Structure.length; i++)
 {
  
   cudaMemcpy(This_Structure.Residue[i].Atom,Residue[i].Atom,(This_Structure.Residue[i].size+1)*sizeof(struct Atom),cudaMemcpyDeviceToHost);
-
+  cudaFree(Residue[i].Atom);
   
 }
 cudaFree(d_Residue);
@@ -382,6 +382,8 @@ dim3 numblock1((a/threadperblock2D.x)+1,(This_Structure.length/threadperblock2D.
   one_span = grid_span / (float)grid_size ;
   point_charge_GPU<<<numblock1,threadperblock2D>>>(d_Residue,one_span,grid_span,grid_size,grid,This_Structure.length+1);
   cudaDeviceSynchronize();
+  free(Residue);
+  cudaFree(d_Residue);
 
 /************/
 
