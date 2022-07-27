@@ -30,6 +30,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <cuda_runtime.h>
 
 
+
+
 __global__ void convolution(cufftComplex *static_fsg,cufftComplex *multiple_fsg,cufftComplex *mobile_fsg,cufftComplex *static_elec_fsg,cufftComplex *mobile_elec_fsg,cufftComplex *multiple_elec_fsg,int electrostatics,int global_grid_size)
 {
   int fx=threadIdx.x+(blockDim.x*blockIdx.x);
@@ -555,6 +557,7 @@ int main( int argc , char *argv[] ) {
   printf( "Creating plans\n" ) ;
   result = cufftPlan3d(&p, global_grid_size , global_grid_size , global_grid_size ,
                                CUFFT_R2C) ;
+
   result = cufftPlan3d(&pinv, global_grid_size , global_grid_size , global_grid_size ,
                                CUFFT_C2R) ;
 
@@ -582,9 +585,12 @@ int main( int argc , char *argv[] ) {
   /* Fourier Transform the static grids (need do only once) */
   printf( "  one time forward FFT calculations\n" ) ;
   result = cufftExecR2C( p , static_grid , NULL ) ;
+  cudaDeviceSynchronize();
   if( electrostatics == 1 ) {
     result =cufftExecR2C( p , static_elec_grid , NULL ) ;
+    cudaDeviceSynchronize();
   }
+  printf("%s is the status of fft\n",cudaGetErrorName(cudaGetLastError()));
 
   printf( "  done\n" ) ;
 
@@ -653,8 +659,10 @@ int main( int argc , char *argv[] ) {
 
     /* Forward Fourier Transforms */
     result = cufftExecR2C( p , mobile_grid , NULL ) ;
+    cudaDeviceSynchronize();
     if( electrostatics == 1 ) {
           result = cufftExecR2C( p , mobile_elec_grid , NULL ) ;
+          cudaDeviceSynchronize();
     }
 
 /************/
@@ -671,8 +679,10 @@ int main( int argc , char *argv[] ) {
   
     /* Reverse Fourier Transform */
     result = cufftExecC2R( pinv , multiple_fsg , NULL ) ;
+    cudaDeviceSynchronize();
     if( electrostatics == 1 ) {
       result = cufftExecC2R( pinv , multiple_elec_fsg , NULL ) ;
+      cudaDeviceSynchronize();
     }
    
 
