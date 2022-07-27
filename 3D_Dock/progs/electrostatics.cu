@@ -134,13 +134,20 @@ for (int i = 1; i <= This_Structure.length; i++)
   a=max(a,This_Structure.Residue[i].size);
   
 }
-cudaMalloc((void**)&d_Residue,This_Structure.length*sizeof(struct Amino_Acid));
-cudaMemcpy(d_Residue,Residue,This_Structure.length*sizeof(struct Amino_Acid),cudaMemcpyHostToDevice);
+cudaMalloc((void**)&d_Residue,(This_Structure.length+1)*sizeof(struct Amino_Acid));
+cudaMemcpy(d_Residue,Residue,(This_Structure.length+1)*sizeof(struct Amino_Acid),cudaMemcpyHostToDevice);
 
 dim3 numblocks((a/threadperblock2D.x)+1,(This_Structure.length/threadperblock2D.y)+1);
 assign_charges_on_GPU<<<numblocks,threadperblock2D>>>(d_Residue,This_Structure.length+1);
 cudaDeviceSynchronize();
-cudaMemcpy(This_Structure.Residue,d_Residue,(This_Structure.length+1)*sizeof(struct Amino_Acid),cudaMemcpyDeviceToHost);
+cudaMemcpy(Residue,d_Residue,(This_Structure.length+1)*sizeof(struct Amino_Acid),cudaMemcpyDeviceToHost);
+for (int i = 1; i <= This_Structure.length; i++)
+{
+ 
+  cudaMemcpy(This_Structure.Residue[i].Atom,Residue[i].Atom,(This_Structure.Residue[i].size+1)*sizeof(struct Atom),cudaMemcpyDeviceToHost);
+
+  
+}
 cudaFree(d_Residue);
 free(Residue);
 /************/
