@@ -37,7 +37,7 @@ __global__ void convolution(cufftComplex *static_fsg,cufftComplex *multiple_fsg,
   int fx=threadIdx.x+(blockDim.x*blockIdx.x);
   int fy=threadIdx.y+(blockDim.y*blockIdx.y);
   int fz=threadIdx.z+(blockDim.z*blockIdx.z);
-  if(fx<global_grid_size&&fy<global_grid_size&&fz<((global_grid_size)/2)+1){
+  if(fx<global_grid_size&&fy<global_grid_size&&fz<(((global_grid_size)/2)+1)){
   int fxyz = fz + ( global_grid_size/2 + 1 ) * ( fy + global_grid_size * fx ) ;
 
           multiple_fsg[fxyz].x =
@@ -53,14 +53,17 @@ __global__ void convolution(cufftComplex *static_fsg,cufftComplex *multiple_fsg,
           } 
 }
 }
-__global__ void init_score(Score *d_Scores)
+__global__ void init_score(Score *d_Scores,int dim_x)
 {
-      int i=threadIdx.x;
-      d_Scores[i].score = 0 ;
-      d_Scores[i].rpscore = 0.0 ;
-      d_Scores[i].coord[1] = 0 ;
-      d_Scores[i].coord[2] = 0 ;
-      d_Scores[i].coord[3] = 0 ;
+      int i=threadIdx.x+(blockDim.x*blockIdx.x);
+      if(i<dim_x)
+      { 
+        d_Scores[i].score = 0 ;
+        d_Scores[i].rpscore = 0.0 ;
+        d_Scores[i].coord[1] = 0 ;
+        d_Scores[i].coord[2] = 0 ;
+        d_Scores[i].coord[3] = 0 ;
+      }
 
 }
 __global__ void get_score(Score *d_Scores,cufftReal *convoluted_grid,cufftReal *convoluted_elec_grid, int electrostatics,int keep_per_rotation,int global_grid_size)
@@ -510,6 +513,7 @@ int main( int argc , char *argv[] ) {
   if( ( Scores = ( struct Score * ) malloc ( ( keep_per_rotation + 2 ) * sizeof( struct Score ) ) ) == NULL ) {
     GENERAL_MEMORY_PROBLEM
   }
+     cudaMalloc((void**)&d_Scores,( keep_per_rotation + 2 ) * sizeof( struct Score ));
 
   if(
     (cudaMalloc((void**)&static_grid,size1* sizeof( cufftReal )) == cudaErrorMemoryAllocation)
@@ -685,15 +689,15 @@ int main( int argc , char *argv[] ) {
 /************/
 
     /* Get best scores */
-    cudaMalloc((void**)&d_Scores,( keep_per_rotation + 2 ) * sizeof( struct Score ));
-    init_score<<<1,keep_per_rotation>>>(d_Scores);
+ 
+    init_score<<<((keep_per_rotation-1)/1024)+1,1024>>>(d_Scores,keep_per_rotation);
     cudaDeviceSynchronize();
       
     get_score<<<numblocks,threadperblock3D>>>(d_Scores,convoluted_grid,convoluted_elec_grid,electrostatics,keep_per_rotation,global_grid_size);
     cudaDeviceSynchronize();
   
     cudaMemcpy(Scores,d_Scores,( keep_per_rotation + 2 ) * sizeof( struct Score ),cudaMemcpyDeviceToHost);
-    cudaFree(d_Scores);
+
     
     if( rotation == 1 ) {
       if( ( ftdock_file = fopen( "scratch_scores.dat" , "w" ) ) == NULL ) {
@@ -726,12 +730,13 @@ int main( int argc , char *argv[] ) {
     free( Rotated_at_Origin_Mobile_Structure.Residue ) ;
 
   }
-
+   
   /* Finished main loop */
 
 /************/
 
   /* Free the memory */
+   cudaFree(d_Scores);
 
   result = cufftDestroy(p) ;
   result = cufftDestroy( pinv ) ;
