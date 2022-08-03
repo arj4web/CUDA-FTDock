@@ -166,9 +166,7 @@ int main( int argc , char *argv[] ) {
   struct Structure	Origin_Static_Structure , Origin_Mobile_Structure ;
   struct Structure	Rotated_at_Origin_Mobile_Structure ;
 
-  /* Co-ordinates */
 
-  int		xyz , fx , fy , fz , fxyz ;
 
   /* Grid stuff */
 

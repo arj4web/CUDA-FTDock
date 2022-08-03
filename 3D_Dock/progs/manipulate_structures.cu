@@ -453,7 +453,7 @@ struct Structure rotate_structure( struct Structure This_Structure , int z_twist
   struct Structure	New_Structure ;
 
 /************/
-
+int a=0;
   New_Structure = duplicate_structure( This_Structure ) ;
   struct Amino_Acid *Residue,*d_Residue;
   Residue = (struct Amino_Acid*)malloc((This_Structure.length+1)*sizeof(Amino_Acid));
