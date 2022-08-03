@@ -45,8 +45,8 @@ __global__ void z_rotation(Angle Angles,int n,int angle_step,int theta)
 __global__ void all_rotation(Angle Angles,int n,int angle_step,int phi_step_for_this_theta,int theta)
 {
     
-    int z_twist=threadIdx.x+(blockDim.x*blockIdx.x);
-    int phi = threadIdx.y+(blockDim.y*blockIdx.y);
+    int phi=threadIdx.x+(blockDim.x*blockIdx.x);
+    int z_twist = threadIdx.y+(blockDim.y*blockIdx.y);
     if(z_twist<360&&phi<360){
       if (phi%phi_step_for_this_theta==0)
       {
@@ -150,7 +150,7 @@ n+=(359/angle_step)+1;
   cudaMemcpy(Angles.z_twist, AnglesonGPU.z_twist,x,cudaMemcpyDeviceToHost);
   cudaMemcpy(Angles.theta,AnglesonGPU.theta,x,cudaMemcpyDeviceToHost);
   cudaMemcpy(Angles.phi, AnglesonGPU.phi,x,cudaMemcpyDeviceToHost);
-
+  
 
 
   if( ( Angles.z_twist = ( int * ) realloc ( Angles.z_twist  , ( 1 + n ) * sizeof( int ) ) ) &&
