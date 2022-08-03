@@ -452,12 +452,6 @@ struct Structure rotate_structure( struct Structure This_Structure , int z_twist
   /* Variables */
   struct Structure	New_Structure ;
 
-  float			post_z_twist_x , post_z_twist_y , post_z_twist_z ;
-  float			post_theta_x , post_theta_y , post_theta_z ;
-
-  /* Counters */
-  int		residue , atom,a=0 ;
-
 /************/
 
   New_Structure = duplicate_structure( This_Structure ) ;
