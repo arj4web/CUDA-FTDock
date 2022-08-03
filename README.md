@@ -17,6 +17,14 @@ the overall computation required. The surface complementarity was the only score
 the original method. The original work on ftdock by Gabb found it a useful addition to
 include an electrostatic filter, and this is again implemented in the current version. 
 
+# History
+
+- The original FTDOCK programme was written in 1997 by Henry Gabb. It was written in Fortran 77 with parallel capabilities for a Silicon Graphics Challenge machine. It was used for the CASP2 conference with some success.
+
+- The Last available version of FTDock (3D-Dock suite) was written by Gidon Moont. It is written in C, with no parallel capabilities. 
+
+- This version of FTDOCK is written in CUDA C/C++ parallelizing many functions of the programme.
+
 # Work done
 
 * Downloaded the code base from [FTDock Download](http://www.sbg.bio.ic.ac.uk/docking/download.html) page and reviewed the main code file [ftdock.c](./3D_Dock/progs/ftdock.c) along with the other reference files to understand the data structures.
