@@ -50,7 +50,7 @@ BEGIN{
   my $relative_path ;
   ( $relative_path ) = ( $full_program_name =~ /^(.+)\/.+$/ ) ;
 
-  unshift( @INC , ( "$relative_path" ) ) ;
+  unshift( @INC , ( "/mnt/c/Users/adiso/OneDrive/Desktop/Workspace/CCDS-Research-Project/3D_Dock/scripts" ) ) ;
 
 }
 
