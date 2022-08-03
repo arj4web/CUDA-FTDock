@@ -121,7 +121,7 @@ void assign_charges( struct Structure This_Structure ) {
 
   /* Counters */
 
-  int	residue , atom,a=0 ;
+  int a=0 ;
 
 /************/
 struct Amino_Acid *Residue,*d_Residue;
@@ -234,30 +234,7 @@ __global__ void electric_fieldonGPU(cufftReal *grid,int grid_size,float grid_spa
 
 void electric_field( struct Structure This_Structure , float grid_span , int grid_size , cufftReal *grid ) {
 
-/************/
-
-  /* Counters */
-
-
-
-  /* Co-ordinates */
-
-  int	x , y , z;
-  float		x_centre , y_centre , z_centre ;//scope for cuda
-
-  /* Variables */
-
-  float		distance ;
-  float		epsilon ;
-
-/************/
-
-
-
 dim3 numblocks(((grid_size-1)/threadperblock3D.x)+1,((grid_size-1)/threadperblock3D.y)+1,((grid_size-1)/threadperblock3D.z)+1);
-
-
-
 
 zero_interaction_grid<<<numblocks,threadperblock3D>>>(grid,grid_size);
 cudaDeviceSynchronize();
