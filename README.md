@@ -28,13 +28,61 @@ include an electrostatic filter, and this is again implemented in the current ve
 
 [For scope of parallelization in this programme](https://slides.com/adityaranjanjha/code/fullscreen)
 
-# Work done
+# Getting Started
 
-* Downloaded the code base from [FTDock Download](http://www.sbg.bio.ic.ac.uk/docking/download.html) page and reviewed the main code file [ftdock.c](./3D_Dock/progs/ftdock.c) along with the other reference files to understand the data structures.
+Clone this repository:
 
-* Now I converted the file to [ftdock.cu](./3D_Dock/progs/ftdock.cu) a cuda runtime c code.
-
-* There I changed the fftw library code to cufft library code and finally removed the fftw library path from header file [structures.h](./3D_Dock/progs/structures.h) making the [ftdock.cu](./3D_Dock/progs/ftdock.cu) code error free without any syntax error and compilation error due to the fourier transformation part in main loop.
+    git clone https://github.com/Adiboy3112/CCDS-Research-Project.git
 
 
+Change directory:
 
+    cd CCDS-Research-Project/3D_Dock/progs/
+
+Now to build the binaries:
+
+    make
+
+Now for testing add the mobile and static pdb files(Parsed) in the same directory and run the ftdock binary:
+
+    ./ftdock -static <static_file_name>.parsed -mobile <mobile_file_name>.parsed > output
+
+
+
+**Note** - The programme has perl scripts to convert pdb files into parsed files Refer [manual](./3D_Dock/Reference/3d-dock-manual.pdf) to run those scripts
+</br></br>
+
+Requirements:
+
+- GNU/Linux OS or Windows WSL 
+- Nvidia Cuda-Toolkit
+- Nvidia GPU with compute capablity > 3.5 (This version is compiled for compute_capablity 7.5 and greater)
+
+# Results
+
+### Speed 
+
+This version of ftdock completes within 5 mins for docking the bovine pancreatic trypsin inhibitor bound to kallikrein A complex where as the original code takes more than 5 hours to complete on my device  
+
+### Accuracy
+
+To be updated soon.......
+
+# System Specs
+
+This programme was tested on my pc and Param Shakti IIT KGP's Supercomputer:
+
+## My PC Specs
+
+CPU:  `Intel(R) Core(TM) i5-10300H`
+
+GPU:  `Nvidia GeForce GTX 1650 Ti`
+
+## Param Shakti Specs Used
+
+CPU: `2* Intel Xeon SKL G-6148 per node`
+
+GPU: `2*Nvidia V100 per node`
+
+Partition used: `GPU-LOW`
+     
