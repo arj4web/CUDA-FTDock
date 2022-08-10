@@ -15,5 +15,5 @@ Global keep per rotation           ::      3      (default)
 
 Calculated values
 Global rotations                   ::   9240
-Global total span (angstroms)      ::    145.938
-Global grid cell span (angstroms)  ::      0.702
+Global total span (angstroms)      ::    145.564
+Global grid cell span (angstroms)  ::      0.700
