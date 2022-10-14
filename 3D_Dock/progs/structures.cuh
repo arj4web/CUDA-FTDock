@@ -78,7 +78,6 @@ struct Amino_Acid{
 	char		chainID[2] ;
 	char		res_seq_plus_iCode[6] ;
 	char		olc[2] ;
-	int		nc ;
 	int		size ;
 	struct Atom	*Atom ;
 } ;

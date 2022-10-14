@@ -54,7 +54,6 @@ struct Structure read_pdb_to_structure( char *pdb_file_name ) {
   float		coord_x , coord_y , coord_z ;
   float		occupancy, temp_factor ;
   char		olc[2] ;
-  int		nc ;
 
   /* Comparison values */
   char	present_res_seq_plus_iCode[6] ;
@@ -113,7 +112,7 @@ struct Structure read_pdb_to_structure( char *pdb_file_name ) {
       sscanf( line_buffer + 46 , "%8f" , &coord_z ) ;
       sscanf( line_buffer + 54 , "%6f" , &occupancy ) ;
       sscanf( line_buffer + 60 , "%6f" , &temp_factor ) ;
-      sscanf( line_buffer + 82 , "%2d" , &nc ) ;
+      
 
       strncpy( atom_name,		line_buffer+12,	4 ) ;
       strncpy( res_name,		line_buffer+17,	3 ) ;
@@ -155,8 +154,7 @@ struct Structure read_pdb_to_structure( char *pdb_file_name ) {
         strcpy( This_Structure.Residue[n_residues].res_name ,           res_name ) ;
         strcpy( This_Structure.Residue[n_residues].chainID ,            chainID ) ;
         strcpy( This_Structure.Residue[n_residues].olc,                 olc ) ;
-        This_Structure.Residue[n_residues].nc = nc ;
-
+        
       }
 
       strcpy( present_res_seq_plus_iCode , res_seq_plus_iCode ) ;
@@ -238,7 +236,7 @@ void write_structure_to_pdb( struct Structure This_Structure , char *pdb_file_na
 
     for( atom = 1 ; atom <= This_Structure.Residue[residue].size ; atom ++ ) {
 
-      fprintf( pdb_file, "ATOM  %5d %4s %3s %1s%5s   %8.3f%8.3f%8.3f%6.2f%6.2f              %1s %2d\n", This_Structure.Residue[residue].Atom[atom].serial, This_Structure.Residue[residue].Atom[atom].atom_name, This_Structure.Residue[residue].res_name, This_Structure.Residue[residue].chainID, This_Structure.Residue[residue].res_seq_plus_iCode, This_Structure.Residue[residue].Atom[atom].coord[1], This_Structure.Residue[residue].Atom[atom].coord[2], This_Structure.Residue[residue].Atom[atom].coord[3], This_Structure.Residue[residue].Atom[atom].occupancy, This_Structure.Residue[residue].Atom[atom].temp_factor, This_Structure.Residue[residue].olc, This_Structure.Residue[residue].nc ) ;
+      fprintf( pdb_file, "ATOM  %5d %4s %3s %1s%5s   %8.3f%8.3f%8.3f%6.2f%6.2f              %1s\n", This_Structure.Residue[residue].Atom[atom].serial, This_Structure.Residue[residue].Atom[atom].atom_name, This_Structure.Residue[residue].res_name, This_Structure.Residue[residue].chainID, This_Structure.Residue[residue].res_seq_plus_iCode, This_Structure.Residue[residue].Atom[atom].coord[1], This_Structure.Residue[residue].Atom[atom].coord[2], This_Structure.Residue[residue].Atom[atom].coord[3], This_Structure.Residue[residue].Atom[atom].occupancy, This_Structure.Residue[residue].Atom[atom].temp_factor, This_Structure.Residue[residue].olc) ;
 
     }
 
@@ -525,7 +523,7 @@ struct Structure merge_structures( struct Structure Structure_One , struct Struc
     strcpy( New_Structure.Residue[residue].chainID            , Structure_One.Residue[residue].chainID ) ;
     strcpy( New_Structure.Residue[residue].res_seq_plus_iCode , Structure_One.Residue[residue].res_seq_plus_iCode ) ;
     strcpy( New_Structure.Residue[residue].olc                , Structure_One.Residue[residue].olc ) ;
-    New_Structure.Residue[residue].nc                         = Structure_One.Residue[residue].nc   ;
+
     New_Structure.Residue[residue].size                       = Structure_One.Residue[residue].size ;
 
     if( ( New_Structure.Residue[residue].Atom = ( struct Atom * ) malloc ( ( Structure_One.Residue[residue].size + 1 ) * sizeof_Atom ) ) == NULL ) {
@@ -547,7 +545,7 @@ struct Structure merge_structures( struct Structure Structure_One , struct Struc
     strcpy( New_Structure.Residue[new_residue].chainID            , Structure_Two.Residue[residue].chainID ) ;
     strcpy( New_Structure.Residue[new_residue].res_seq_plus_iCode , Structure_Two.Residue[residue].res_seq_plus_iCode ) ;
     strcpy( New_Structure.Residue[new_residue].olc                , Structure_Two.Residue[residue].olc ) ;
-    New_Structure.Residue[new_residue].nc                         = Structure_Two.Residue[residue].nc   ;
+
     New_Structure.Residue[new_residue].size                       = Structure_Two.Residue[residue].size ;
     strcpy( New_Structure.Residue[new_residue].res_name           , Structure_Two.Residue[residue].res_name ) ;
 
